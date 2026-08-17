@@ -13,6 +13,7 @@ before/after quality compare, transparent per-file settings, open source-friendl
 
 ## Milestones
 - [x] M0  Scaffold, `tauri dev` opens.
+- [x] M1–M6 core done (see README); M7 partially (folder watching ✓).
 - [ ] M1  Vertical slice: drop 1 video → ffmpeg → live progress → result card (before/after size, savings %).
 - [ ] M2  Job queue: batch, bounded concurrency, per-file status, cancel, pause/resume.
 - [ ] M3  File types: images (jpg/png/webp/avif, resize, quality), GIF (video→gif 2-pass palette, gif optimize),

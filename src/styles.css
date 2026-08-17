@@ -98,7 +98,7 @@ p, .hint, .sub { text-wrap: pretty; }
   padding: 0 14px 0 84px; background: var(--bg);
 }
 .titlebar .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
-.titlebar .logo { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: white; background: var(--accent); }
+.titlebar .logo { width: 24px; height: 24px; display: block; object-fit: contain; }
 .titlebar .right { display: flex; justify-content: flex-end; gap: 4px; }
 .nav { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--bg-sunken); }
 .nav button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 8px; color: var(--fg-2); font-weight: 500; transition: color .12s, background .12s; }
@@ -141,7 +141,7 @@ p, .hint, .sub { text-wrap: pretty; }
   transition: border-color .15s var(--ease), background .15s var(--ease);
 }
 .dropzone.active { border-color: var(--accent); background: var(--accent-soft); }
-.dropzone .icon { width: 68px; height: 68px; border-radius: 20px; margin: 0 auto 18px; display: grid; place-items: center; color: white; background: var(--accent); }
+.dropzone .icon { width: 72px; height: 72px; margin: 0 auto 16px; display: block; object-fit: contain; }
 .dropzone h2 { font-size: 19px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 6px; }
 .dropzone p { color: var(--fg-2); margin-bottom: 20px; }
 .dropzone .actions { display: flex; gap: 8px; justify-content: center; }

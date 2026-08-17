@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { open } from "@tauri-apps/plugin-dialog";
-import { RiAddLine, RiFolderAddLine, RiDeleteBinLine, RiFlashlightLine, RiForbidLine, RiQuillPenLine, RiArrowDownLine } from "@remixicon/react";
+import { RiAddLine, RiFolderAddLine, RiDeleteBinLine, RiFlashlightLine, RiForbidLine, RiArrowDownLine } from "@remixicon/react";
 import { useStore } from "../store";
 import { FileCard } from "../components/FileCard";
 import { SettingsPanel } from "../components/SettingsPanel";
@@ -62,7 +62,7 @@ export function CompressView() {
         {files.length === 0 ? (
           <div className="empty">
             <div className={`dropzone${dragging ? " active" : ""}`}>
-              <div className="icon"><RiQuillPenLine size={32} /></div>
+              <img className="icon" src="/feather-logo.png" alt="" width={72} height={72} draggable={false} />
               <h2>Drop files to make them lighter</h2>
               <p>Videos, images, GIFs and PDFs — compressed on your device, never uploaded.</p>
               <div className="actions">

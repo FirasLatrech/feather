@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { RiQuillPenLine, RiAddLine, RiSettings3Line, RiHistoryLine, RiFlashlightLine } from "@remixicon/react";
+import { RiAddLine, RiSettings3Line, RiHistoryLine, RiFlashlightLine } from "@remixicon/react";
 import { useStore } from "./store";
 import { CompressView, pickFiles } from "./views/CompressView";
 import { HistoryView } from "./views/HistoryView";
@@ -50,7 +50,7 @@ export default function App() {
     <div className="app">
       <header className="titlebar" data-tauri-drag-region>
         <div className="brand" data-tauri-drag-region>
-          <span className="logo"><RiQuillPenLine size={15} /></span>
+          <img className="logo" src="/feather-logo.png" alt="" width={24} height={24} draggable={false} />
           <span data-tauri-drag-region>Feather</span>
         </div>
         <nav className="nav">

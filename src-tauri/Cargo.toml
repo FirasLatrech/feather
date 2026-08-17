@@ -1,6 +1,6 @@
 [package]
 name = "feather"
-version = "0.1.0"
+version = "0.1.1"
 description = "Feather — offline media compressor"
 authors = ["Firas Latrach"]
 edition = "2021"

@@ -15,7 +15,7 @@ export function ToolsBanner() {
   if (ff && ff.phase !== "error") {
     items.push(<Row key="ff" icon={ff.phase === "done" ? <RiCheckboxCircleFill size={16} color="var(--ok)" /> : <RiDownloadCloud2Line size={16} />} title={ff.phase === "done" ? "FFmpeg ready" : "Setting up FFmpeg"} sub={ff.message} pct={ff.percent} />);
   } else if (needFf) {
-    items.push(<Row key="ff" icon={<RiErrorWarningLine size={16} color="var(--warn)" />} title="FFmpeg is required for videos, GIFs and previews" sub={ff?.phase === "error" ? ff.message : "Feather can download it for you (~40 MB, one time)."} action={<button className="btn sm primary" onClick={() => installTool("ffmpeg")}>Download FFmpeg</button>} />);
+    items.push(<Row key="ff" icon={<RiErrorWarningLine size={16} color="var(--warn)" />} title="FFmpeg is required for videos, GIFs and previews" sub={ff?.phase === "error" ? ff.message : "Feather can download it for you (~60 MB, one time)."} action={<button className="btn sm primary" onClick={() => installTool("ffmpeg")}>Download FFmpeg</button>} />);
   }
   const gs = installs["ghostscript"];
   const needGs = !tools.ghostscript && files.some((f) => f.kind === "pdf");

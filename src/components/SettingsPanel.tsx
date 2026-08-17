@@ -38,7 +38,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
           {subtitle && <div className="sub">{subtitle}</div>}
         </div>
         {onReset && <button className="btn sm ghost" onClick={onReset}>Reset</button>}
-        {onClose && <button className="icon-btn sm" onClick={onClose} title="Back to defaults (Esc)"><RiCloseLine size={16} /></button>}
+        {onClose && <button className="icon-btn sm" onClick={onClose} title="Back to defaults (Esc)" aria-label="Close per-file settings"><RiCloseLine size={16} /></button>}
       </div>
       <div className="sidebar-body">
         {showVideo && (

@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { open } from "@tauri-apps/plugin-dialog";
 import { RiAddLine, RiFolderAddLine, RiDeleteBinLine, RiFlashlightLine, RiForbidLine, RiQuillPenLine, RiArrowDownLine } from "@remixicon/react";
 import { useStore } from "../store";
@@ -46,7 +47,10 @@ export function CompressView() {
     return { inTotal, outTotal, doneIn, done, running, queued, failed, pending, avgProgress: files.length ? prog / files.length : 0 };
   }, [files, jobs, jobByPath]);
 
+  const [confirm, setConfirm] = useState(false);
   if (!settings) return null;
+  const destructive = settings.output.overwrite_original || settings.output.trash_original || Object.values(overrides).some((o) => o.output.overwrite_original || o.output.trash_original);
+  const startCompress = () => { if (destructive) setConfirm(true); else void compress(); };
   const active = stats.running + stats.queued > 0;
   const canCompress = stats.pending > 0 && !active;
   const savedBytes = Math.max(0, stats.doneIn - stats.outTotal);
@@ -78,7 +82,7 @@ export function CompressView() {
               <div className="spacer" />
               <button className="btn sm ghost" onClick={() => pickFiles(addPaths)} disabled={adding}><RiAddLine size={15} /> Add</button>
               <button className="btn sm ghost" onClick={() => pickFolder(addPaths)} disabled={adding}><RiFolderAddLine size={15} /> Folder</button>
-              <button className="btn sm ghost" onClick={clearFiles} disabled={active}><RiDeleteBinLine size={15} /> Clear</button>
+              <button className="btn sm ghost" onClick={clearFiles} disabled={active} aria-label="Clear file list"><RiDeleteBinLine size={15} /> Clear</button>
             </div>
             <div className="filelist" onClick={(e) => { if (e.target === e.currentTarget) select(null); }}>
               <div className="file-grid" onClick={(e) => { if (e.target === e.currentTarget) select(null); }}>
@@ -106,13 +110,25 @@ export function CompressView() {
             ) : stats.pending === 0 ? (
               <button className="btn lg" onClick={() => pickFiles(addPaths)}><RiAddLine size={16} /> Add more</button>
             ) : (
-              <button className="btn primary lg" disabled={!canCompress} onClick={() => compress()} title="⌘↩">
+              <button className="btn primary lg" disabled={!canCompress} onClick={startCompress} title="⌘↩">
                 <RiFlashlightLine size={16} /> Compress{stats.pending > 0 && files.length !== stats.pending ? ` ${stats.pending}` : ""}
               </button>
             )}
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirm}
+        title={settings.output.overwrite_original ? "Replace original files?" : "Move originals to Trash?"}
+        confirmLabel={settings.output.overwrite_original ? "Replace & compress" : "Trash & compress"}
+        onCancel={() => setConfirm(false)}
+        onConfirm={() => { setConfirm(false); void compress(); }}
+      >
+        {settings.output.overwrite_original
+          ? "Your source files will be overwritten with the compressed versions. This can't be undone."
+          : "After compressing, the original files will be moved to the Trash. You can restore them from there."}
+      </ConfirmDialog>
 
       {files.length === 0 ? null : selFile ? (
         <SettingsPanel

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RiCheckboxCircleFill, RiCloseCircleFill, RiRefreshLine, RiSunLine, RiMoonLine, RiComputerLine } from "@remixicon/react";
 import { useStore } from "../store";
 import { Field, NumberInput, Toggle } from "../components/Controls";
@@ -7,8 +7,8 @@ import { applyTheme, getTheme, type Theme } from "../lib/theme";
 
 export function SettingsView() {
   const { settings, updateSettings, tools, refreshTools } = useStore();
-  const [theme, setTheme] = useState<Theme>(getTheme());
-  useEffect(() => applyTheme(theme), [theme]);
+  const [theme, setThemeState] = useState<Theme>(getTheme());
+  const setTheme = (t: Theme) => { applyTheme(t); setThemeState(t); };
   if (!settings) return null;
   const isMac = navigator.userAgent.includes("Mac");
 

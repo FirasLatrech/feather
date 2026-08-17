@@ -25,7 +25,7 @@ export function FileCard({ file }: { file: MediaInfo }) {
         <span className="badge">{extOf(file.path)}</span>
         {file.duration != null && file.kind === "video" && <span className="dur">{fmtDuration(file.duration)}</span>}
         {!running && (
-          <button className="remove" title="Remove" onClick={(e) => { stop(e); removeFile(file.path); }}><RiCloseLine size={14} /></button>
+          <button className="remove" title="Remove" aria-label="Remove file" onClick={(e) => { stop(e); removeFile(file.path); }}><RiCloseLine size={14} /></button>
         )}
         {hasOverride && <span className="custom pill glass" title="Custom settings"><RiEqualizerLine size={11} /> custom</span>}
       </div>
@@ -62,11 +62,11 @@ export function FileCard({ file }: { file: MediaInfo }) {
               <span className="row-actions">
                 {job.output_path && (
                   <>
-                    <button className="icon-btn sm" title="Open" onClick={(e) => { stop(e); void openPath(job.output_path!); }}><RiPlayLine size={15} /></button>
-                    <button className="icon-btn sm" title="Show in folder" onClick={(e) => { stop(e); void revealItemInDir(job.output_path!); }}><RiFolderOpenLine size={15} /></button>
+                    <button className="icon-btn sm" title="Open" aria-label="Open result" onClick={(e) => { stop(e); void openPath(job.output_path!); }}><RiPlayLine size={15} /></button>
+                    <button className="icon-btn sm" title="Show in folder" aria-label="Show in folder" onClick={(e) => { stop(e); void revealItemInDir(job.output_path!); }}><RiFolderOpenLine size={15} /></button>
                   </>
                 )}
-                <button className="icon-btn sm" title="Compress again" onClick={(e) => { stop(e); void compress([file.path]); }}><RiRestartLine size={15} /></button>
+                <button className="icon-btn sm" title="Compress again" aria-label="Compress again" onClick={(e) => { stop(e); void compress([file.path]); }}><RiRestartLine size={15} /></button>
               </span>
             </div>
           </>

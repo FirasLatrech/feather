@@ -58,8 +58,8 @@ export default function App() {
           <button className={view === "history" ? "active" : ""} onClick={() => setView("history")}><RiHistoryLine size={15} /> History</button>
         </nav>
         <div className="right">
-          <button className="icon-btn" title="Add files (⌘O)" onClick={() => pickFiles(addPaths)}><RiAddLine size={18} /></button>
-          <button className={`icon-btn${view === "settings" ? " active" : ""}`} title="Settings (⌘,)" onClick={() => setView(view === "settings" ? "compress" : "settings")} style={view === "settings" ? { background: "var(--bg-sunken)", color: "var(--fg)" } : undefined}><RiSettings3Line size={18} /></button>
+          <button className="icon-btn" title="Add files (⌘O)" aria-label="Add files" onClick={() => pickFiles(addPaths)}><RiAddLine size={18} /></button>
+          <button className={`icon-btn${view === "settings" ? " active" : ""}`} title="Settings (⌘,)" aria-label="Settings" aria-pressed={view === "settings"} onClick={() => setView(view === "settings" ? "compress" : "settings")} style={view === "settings" ? { background: "var(--bg-sunken)", color: "var(--fg)" } : undefined}><RiSettings3Line size={18} /></button>
         </div>
       </header>
       {view === "compress" && <CompressView />}

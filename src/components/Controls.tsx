@@ -19,11 +19,11 @@ export function Group({ icon, title, summary, children, defaultOpen = true }: { 
   const [open, setOpen] = useState(defaultOpen);
   return (
     <section className={`group${open ? " open" : ""}`}>
-      <button className="group-head" onClick={() => setOpen(!open)}>
+      <button className="group-head" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="gi">{icon}</span>
         {title}
         {!open && summary && <span className="summary">{summary}</span>}
-        <RiArrowDownSLine size={16} className="chev" style={{ marginLeft: open || !summary ? "auto" : 8 }} />
+        <RiArrowDownSLine size={16} className="chev" style={{ marginLeft: open || !summary ? "auto" : 8 }} aria-hidden />
       </button>
       {open && <div className="group-body">{children}</div>}
     </section>
@@ -42,8 +42,8 @@ export function Segmented<T extends string>({ value, options, onChange, compact 
   );
 }
 
-export function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return <button className={`toggle${value ? " on" : ""}`} onClick={() => onChange(!value)} aria-pressed={value} />;
+export function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label?: string }) {
+  return <button className={`toggle${value ? " on" : ""}`} onClick={() => onChange(!value)} role="switch" aria-checked={value} aria-label={label} />;
 }
 
 export function QualityPicker({ value, onChange }: { value: Quality; onChange: (q: Quality) => void }) {

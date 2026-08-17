@@ -5,7 +5,10 @@
 Feather is a fast, open-source media compressor for macOS (Windows & Linux builds coming).
 Drop files in, pick a quality, get smaller files. Nothing is uploaded, ever.
 
-<p align="center"><i>Video · Image · GIF · PDF — hardware-accelerated, batch, folder watching</i></p>
+<p align="center">
+  <img src="docs/screenshot-done.png" alt="Feather — files compressed with savings shown" width="820">
+</p>
+<p align="center"><i>Video · Image · GIF · PDF — hardware-accelerated, batch, folder watching, CLI + MCP</i></p>
 
 ## Download
 
@@ -72,6 +75,18 @@ cd src-tauri && FEATHER_SAMPLES=/path/to/samples cargo test   # engine tests aga
 
 Stack: [Tauri 2](https://tauri.app) (Rust) · React · TypeScript · Vite.
 Engine: FFmpeg for video/GIF, Ghostscript for PDF, pure-Rust image codecs (`image`, `mozjpeg`, `oxipng`, `webp`, `ravif`).
+
+## Screenshots
+
+| Drop zone | Dark theme, batch running |
+|---|---|
+| ![Empty state](docs/screenshot-empty.png) | ![Dark](docs/screenshot-dark.png) |
+
+## Contributing
+
+Issues and PRs are welcome. Run `pnpm tauri dev` for the app, `pnpm dev` for the UI in a browser (mock backend,
+`?demo=files|running|done`), and `cargo test` in `src-tauri` (set `FEATHER_SAMPLES` to a folder with sample media
+to run the encoder tests).
 
 ## Roadmap
 

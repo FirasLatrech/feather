@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RiCheckboxCircleFill, RiCloseCircleFill, RiRefreshLine, RiSunLine, RiMoonLine, RiComputerLine, RiFolderAddLine, RiCloseLine, RiDownloadLine } from "@remixicon/react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../lib/api";
@@ -12,6 +12,11 @@ export function SettingsView() {
   const { settings, updateSettings, tools, refreshTools } = useStore();
   const [theme, setThemeState] = useState<Theme>(getTheme());
   const [qa, setQa] = useState<string>("");
+  const [cli, setCli] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { void api.cliPath().then(setCli); }, []);
+  const mcpConfig = cli ? JSON.stringify({ mcpServers: { feather: { command: cli, args: ["mcp"] } } }, null, 2) : "";
+  const copy = async (t: string) => { try { await navigator.clipboard.writeText(t); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ } };
   const setTheme = (t: Theme) => { applyTheme(t); setThemeState(t); };
   if (!settings) return null;
   const isMac = navigator.userAgent.includes("Mac");
@@ -107,6 +112,26 @@ export function SettingsView() {
             </div>
           </>
         )}
+
+        <div className="section-title">AI agents · MCP</div>
+        <div className="panel">
+          <div className="hint" style={{ marginBottom: -4 }}>Feather ships an MCP server so Claude, Cursor or any MCP client can compress files for you (tools: compress, probe, estimate, history).</div>
+          {cli ? (
+            <>
+              <Field label="Claude Code" hint="Run once in a terminal">
+                <div className="code-row"><code>claude mcp add feather -- "{cli}" mcp</code><button className="btn sm" onClick={() => copy(`claude mcp add feather -- "${cli}" mcp`)}>{copied ? "Copied" : "Copy"}</button></div>
+              </Field>
+              <Field label="Claude Desktop / Cursor / others" hint="Add to the client's MCP config (claude_desktop_config.json, .cursor/mcp.json…)">
+                <div className="code-row"><pre>{mcpConfig}</pre><button className="btn sm" onClick={() => copy(mcpConfig)}>{copied ? "Copied" : "Copy"}</button></div>
+              </Field>
+              <Field label="Terminal" hint="The same binary is a CLI">
+                <div className="code-row"><code>"{cli}" compress ~/Movies/*.mp4 --quality good --max 1920</code></div>
+              </Field>
+            </>
+          ) : (
+            <div className="notice">The CLI/MCP binary ships inside the built app (Feather.app). Build with <code>pnpm tauri build</code> or run <code>sh scripts/build-cli.sh</code>.</div>
+          )}
+        </div>
 
         <div className="section-title">Engine</div>
         <div className="panel">

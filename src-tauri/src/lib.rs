@@ -372,6 +372,16 @@ fn install_quick_action() -> Result<String, String> {
     }
 }
 
+/// Location of the bundled `feather-cli` (for MCP / terminal use), if present.
+#[tauri::command]
+fn cli_path() -> Option<String> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?;
+    let name = if cfg!(windows) { "feather-cli.exe" } else { "feather-cli" };
+    let candidates = [dir.join(name), dir.join("../MacOS").join(name), dir.join("../../../release").join(name)];
+    candidates.iter().find(|p| p.exists()).and_then(|p| p.canonicalize().ok()).map(|p| p.to_string_lossy().to_string())
+}
+
 #[tauri::command]
 fn app_dirs(app: AppHandle) -> Result<HashMap<String, String>, String> {
     let mut m = HashMap::new();
@@ -435,6 +445,7 @@ pub fn run() {
             thumbnail,
             take_opened_files,
             install_quick_action,
+            cli_path,
             app_dirs
         ])
         .build(tauri::generate_context!())

@@ -23,6 +23,7 @@ const real = {
   appDirs: () => invoke<Record<string, string>>("app_dirs"),
   takeOpenedFiles: () => invoke<string[]>("take_opened_files"),
   installQuickAction: () => invoke<string>("install_quick_action"),
+  cliPath: () => invoke<string | null>("cli_path"),
 };
 
 export const api: typeof real = isTauri ? real : (mockApi as unknown as typeof real);

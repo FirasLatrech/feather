@@ -110,5 +110,6 @@ export const mockApi = {
   appDirs: async () => ({ downloads: "/Users/demo/Downloads" }),
   takeOpenedFiles: async () => [],
   installQuickAction: async () => "/Users/demo/Library/Services/Compress with Feather.workflow",
+  cliPath: async () => "/Applications/Feather.app/Contents/MacOS/feather-cli",
 };
 export const mockConvertFileSrc = (p: string) => p;

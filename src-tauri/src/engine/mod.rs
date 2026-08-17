@@ -5,6 +5,7 @@ pub mod jobs;
 pub mod output;
 pub mod pdf;
 pub mod probe;
+pub mod run;
 pub mod settings;
 pub mod tools;
 pub mod video;

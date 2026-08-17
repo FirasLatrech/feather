@@ -9,6 +9,10 @@ edition = "2021"
 name = "feather_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[bin]]
+name = "feather-cli"
+path = "src/bin/feather-cli.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -34,6 +38,8 @@ regex = "1"
 tauri-plugin-notification = "2"
 notify = "8"
 mozjpeg = "0.10"
+clap = { version = "4", features = ["derive"] }
+dirs = "6"
 
 # Dev builds: keep our crate fast to compile but optimise dependencies (image/oxipng/ravif are 10-50x
 # slower unoptimised — that's what makes `tauri dev` image compression feel slow).

@@ -6,7 +6,7 @@ Feather is a fast, open-source media compressor for macOS (Windows & Linux build
 Drop files in, pick a quality, get smaller files. Nothing is uploaded, ever.
 
 <p align="center">
-  <img src="docs/feather-tour.gif" alt="Feather product tour" width="820">
+  <img src="docs/feather-trailer.gif" alt="Feather trailer" width="820">
 </p>
 <p align="center">
   <a href="https://github.com/FirasLatrech/feather/releases/latest">Download</a> ·

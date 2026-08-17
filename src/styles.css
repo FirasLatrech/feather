@@ -180,8 +180,9 @@ p, .hint, .sub { text-wrap: pretty; }
 .progress.indeterminate > i { width: 30%; animation: slide 1.1s infinite ease-in-out; }
 @keyframes slide { 0% { transform: translateX(-100%);} 100% { transform: translateX(400%);} }
 .result { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 22px; }
-.sizes { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11.5px; color: var(--fg-3); }
+.sizes { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--fg-3); white-space: nowrap; min-width: 0; overflow: hidden; }
 .sizes b { color: var(--fg); font-weight: 600; }
+.sizes .dim { color: var(--fg-3); }
 .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; line-height: 1.5; }
 .pill.ok { background: var(--ok-soft); color: var(--ok); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); }

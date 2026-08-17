@@ -1,7 +1,7 @@
 import { RiFilmLine, RiFilePdf2Line, RiImageLine, RiCloseLine, RiFolderOpenLine, RiRestartLine, RiForbidLine, RiEqualizerLine, RiPlayLine, RiFileGifLine } from "@remixicon/react";
 import { revealItemInDir, openPath } from "@tauri-apps/plugin-opener";
 import type { MediaInfo } from "../lib/types";
-import { fmtBytes, fmtDuration, extOf, savings, fmtElapsed } from "../lib/format";
+import { fmtBytes, fmtDuration, extOf, savings, fmtElapsed, fmtEta } from "../lib/format";
 import { useJobFor, useStore } from "../store";
 
 export function FileCard({ file }: { file: MediaInfo }) {
@@ -41,7 +41,11 @@ export function FileCard({ file }: { file: MediaInfo }) {
           <>
             <div className={`progress${status === "queued" ? " indeterminate" : ""}`}><i style={{ width: `${status === "queued" ? 30 : job!.progress}%` }} /></div>
             <div className="result">
-              <span className="sizes">{status === "queued" ? "Waiting…" : `${job!.progress.toFixed(0)}%`}</span>
+              <span className="sizes">
+                {status === "queued" ? "Waiting…" : `${job!.progress.toFixed(0)}%`}
+                {status === "running" && job!.speed != null && <span className="dim">· {job!.speed.toFixed(1)}×</span>}
+                {status === "running" && job!.eta_secs != null && <span className="dim">· {fmtEta(job!.eta_secs)}</span>}
+              </span>
               <button className="btn sm ghost danger" onClick={(e) => { stop(e); void cancelJob(job!.id); }}><RiForbidLine size={13} /> Cancel</button>
             </div>
           </>

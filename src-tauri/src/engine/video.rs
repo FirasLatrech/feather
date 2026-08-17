@@ -37,7 +37,17 @@ pub fn output_ext(info: &MediaInfo, s: &VideoSettings) -> &'static str {
     }
 }
 
-fn effective_codec(ext: &str, s: &VideoSettings) -> VideoCodec {
+fn effective_codec(info: &MediaInfo, ext: &str, s: &VideoSettings) -> VideoCodec {
+    let requested = match s.codec {
+        VideoCodec::Auto => match info.video_codec.as_deref() {
+            Some("hevc") | Some("h265") => VideoCodec::H265,
+            Some("vp9") if ext == "webm" => VideoCodec::Vp9,
+            Some("av1") => VideoCodec::Av1,
+            _ => VideoCodec::H264,
+        },
+        c => c,
+    };
+    let s = &VideoSettings { codec: requested, ..s.clone() };
     match ext {
         // WebM only supports VP8/VP9/AV1
         "webm" => match s.codec {
@@ -62,33 +72,32 @@ fn crf(codec: VideoCodec, q: Quality) -> u32 {
         Quality::Acceptable => 4,
     };
     match codec {
-        VideoCodec::H264 => [18, 22, 26, 30, 34][base],
+        VideoCodec::Auto | VideoCodec::H264 => [18, 22, 26, 30, 34][base],
         VideoCodec::H265 => [20, 24, 28, 32, 36][base],
         VideoCodec::Vp9 => [24, 30, 34, 38, 42][base],
         VideoCodec::Av1 => [26, 32, 38, 44, 50][base],
     }
 }
 
-/// VideoToolbox uses -q:v 1..100 (higher = better), not CRF.
-fn vt_quality(q: Quality) -> u32 {
-    match q {
-        Quality::Highest => 78,
-        Quality::High => 68,
-        Quality::Good => 58,
-        Quality::Medium => 48,
-        Quality::Acceptable => 38,
+/// VideoToolbox uses -q:v 1..100 (higher = better), not CRF. Ladders calibrated so that
+/// "Good" lands near the size of libx264 crf 26 / libx265 crf 28 on 1080p content.
+fn vt_quality(codec: VideoCodec, q: Quality) -> u32 {
+    let i = match q { Quality::Highest => 0, Quality::High => 1, Quality::Good => 2, Quality::Medium => 3, Quality::Acceptable => 4 };
+    match codec {
+        VideoCodec::H265 => [66, 59, 53, 47, 41][i],
+        _ => [65, 57, 50, 44, 38][i],
     }
 }
 
 pub fn plan(info: &MediaInfo, s: &VideoSettings) -> Plan {
     let ext = output_ext(info, s);
-    let codec = effective_codec(ext, s);
+    let codec = effective_codec(info, ext, s);
     let resolution = info.width.zip(info.height).and_then(|(w, h)| s.resize.target(w, h));
     Plan {
         ext,
         two_pass: s.target_size_mb.is_some() && ext != "gif" && ext != "mp3",
         codec_label: match codec {
-            VideoCodec::H264 => "h264",
+            VideoCodec::Auto | VideoCodec::H264 => "h264",
             VideoCodec::H265 => "h265",
             VideoCodec::Vp9 => "vp9",
             VideoCodec::Av1 => "av1",
@@ -111,8 +120,15 @@ pub fn build_args(
     passlog: Option<&Path>,
 ) -> Vec<String> {
     let ext = output_ext(info, s);
-    let codec = effective_codec(ext, s);
+    let codec = effective_codec(info, ext, s);
     let mut a: Vec<String> = vec!["-hide_banner".into(), "-y".into(), "-nostdin".into()];
+    // Target-size mode needs accurate two-pass rate control → software encoder even if HW is on.
+    let use_hw = s.hw_accel && cfg!(target_os = "macos") && s.target_size_mb.is_none()
+        && matches!(codec, VideoCodec::H264 | VideoCodec::H265);
+    if use_hw && ext != "mp3" {
+        // Hardware-accelerated *decode* as well (big win for 4K sources).
+        a.extend(["-hwaccel".into(), "videotoolbox".into()]);
+    }
 
     // Trim (input-side seek is fast & accurate enough with re-encode)
     if let Some(st) = s.trim_start.filter(|v| *v > 0.0) {
@@ -151,7 +167,6 @@ pub fn build_args(
     }
 
     // Encoder + quality
-    let use_hw = s.hw_accel && cfg!(target_os = "macos") && matches!(codec, VideoCodec::H264 | VideoCodec::H265);
     let two_pass = s.target_size_mb.is_some();
     let mut target_bitrate_k: Option<u64> = None;
     if let Some(mb) = s.target_size_mb {
@@ -169,14 +184,14 @@ pub fn build_args(
     }
 
     match codec {
-        VideoCodec::H264 | VideoCodec::H265 => {
+        VideoCodec::Auto | VideoCodec::H264 | VideoCodec::H265 => {
             if use_hw {
                 let enc = if codec == VideoCodec::H264 { "h264_videotoolbox" } else { "hevc_videotoolbox" };
-                a.extend(["-c:v".into(), enc.into()]);
+                a.extend(["-c:v".into(), enc.into(), "-realtime".into(), "0".into(), "-prio_speed".into(), "1".into()]);
                 if let Some(bk) = target_bitrate_k {
                     a.extend(["-b:v".into(), format!("{bk}k")]);
                 } else {
-                    a.extend(["-q:v".into(), vt_quality(s.quality).to_string()]);
+                    a.extend(["-q:v".into(), vt_quality(codec, s.quality).to_string()]);
                 }
                 if codec == VideoCodec::H265 {
                     a.extend(["-tag:v".into(), "hvc1".into()]);
@@ -184,7 +199,10 @@ pub fn build_args(
                 a.extend(["-pix_fmt".into(), "yuv420p".into()]);
             } else {
                 let enc = if codec == VideoCodec::H264 { "libx264" } else { "libx265" };
-                a.extend(["-c:v".into(), enc.into(), "-preset".into(), "medium".into()]);
+                // `fast` is ~2x quicker than `medium` for ~3-5% larger files — the right default for a
+                // desktop tool; Highest quality keeps `medium`.
+                let preset = if s.quality == Quality::Highest { "medium" } else { "fast" };
+                a.extend(["-c:v".into(), enc.into(), "-preset".into(), preset.into()]);
                 if let Some(bk) = target_bitrate_k {
                     a.extend(["-b:v".into(), format!("{bk}k")]);
                     if codec == VideoCodec::H265 {
@@ -207,7 +225,7 @@ pub fn build_args(
             }
         }
         VideoCodec::Vp9 => {
-            a.extend(["-c:v".into(), "libvpx-vp9".into(), "-row-mt".into(), "1".into(), "-deadline".into(), "good".into(), "-cpu-used".into(), "2".into()]);
+            a.extend(["-c:v".into(), "libvpx-vp9".into(), "-row-mt".into(), "1".into(), "-deadline".into(), "good".into(), "-cpu-used".into(), "4".into(), "-tile-columns".into(), "2".into()]);
             if let Some(bk) = target_bitrate_k {
                 a.extend(["-b:v".into(), format!("{bk}k")]);
             } else {
@@ -216,7 +234,7 @@ pub fn build_args(
             a.extend(["-pix_fmt".into(), "yuv420p".into()]);
         }
         VideoCodec::Av1 => {
-            a.extend(["-c:v".into(), "libsvtav1".into(), "-preset".into(), "8".into()]);
+            a.extend(["-c:v".into(), "libsvtav1".into(), "-preset".into(), "10".into()]);
             if let Some(bk) = target_bitrate_k {
                 a.extend(["-b:v".into(), format!("{bk}k")]);
             } else {

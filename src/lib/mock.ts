@@ -10,7 +10,8 @@ export function mockListen(event: string, h: Handler) {
 function emit(event: string, payload: unknown) { for (const h of listeners[event] ?? []) h({ payload }); }
 
 const defaults: Settings = {
-  video: { quality: "good", codec: "h264", format: "same", hw_accel: false, resize: { mode: "none", value: 0 }, fps: null, remove_audio: false, target_size_mb: null, trim_start: null, trim_end: null, threads: 0 },
+  version: 2,
+  video: { quality: "good", codec: "auto", format: "same", hw_accel: true, resize: { mode: "none", value: 0 }, fps: null, remove_audio: false, target_size_mb: null, trim_start: null, trim_end: null, threads: 0 },
   image: { quality: "good", format: "same", resize: { mode: "none", value: 0 }, keep_metadata: false },
   gif: { quality: "good", fps: 15, resize: { mode: "width", value: 640 }, loop_forever: true },
   pdf: { quality: "good" },
@@ -46,7 +47,7 @@ export const mockApi = {
   getSettings: async () => structuredClone(settings),
   saveSettings: async (s: Settings) => { settings = s; },
   startCompression: async (files: MediaInfo[]) => {
-    const created: Job[] = files.map((f) => ({ id: uuid(), input: f, output_path: null, status: "queued", progress: 0, output_size: null, output_width: null, output_height: null, error: null, elapsed_ms: null, finished_at: null, larger: false }));
+    const created: Job[] = files.map((f) => ({ id: uuid(), input: f, output_path: null, status: "queued", progress: 0, output_size: null, output_width: null, output_height: null, error: null, elapsed_ms: null, finished_at: null, larger: false, speed: null, eta_secs: null }));
     for (const j of created) jobs[j.id] = j;
     const demo = new URLSearchParams(location.search).get("demo");
     if (demo === "done" || demo === "running") {
@@ -59,7 +60,7 @@ export const mockApi = {
         jobs[j.id] = isDone
           ? { ...j, status: "done", progress: 100, output_size: Math.round(j.input.size * ratio), output_path: j.input.path.replace(/(\.[^.]+)$/, "_compressed$1"), output_width: j.input.width, output_height: j.input.height, elapsed_ms: 4200 + i * 900, finished_at: Date.now() }
           : isFail ? { ...j, status: "failed", error: "Ghostscript not found. Install it (brew install ghostscript) to compress PDFs." }
-          : isRun ? { ...j, status: "running", progress: i === 2 ? 63 : 18 }
+          : isRun ? { ...j, status: "running", progress: i === 2 ? 63 : 18, speed: i === 2 ? 4.2 : 1.7, eta_secs: i === 2 ? 95 : 1900 }
           : j;
       });
       setTimeout(() => { for (const j of created) emit("job:update", jobs[j.id]); }, 0);

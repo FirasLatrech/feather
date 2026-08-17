@@ -40,6 +40,10 @@ pub struct Job {
     pub finished_at: Option<i64>,
     /// output ended up larger than input
     pub larger: bool,
+    /// encode speed relative to realtime (ffmpeg `speed=`), while running
+    pub speed: Option<f32>,
+    /// estimated seconds remaining, while running
+    pub eta_secs: Option<f64>,
     /// per-job settings snapshot (so per-file overrides are honoured)
     #[serde(skip)]
     pub settings: Option<Arc<Settings>>,
@@ -155,6 +159,8 @@ impl JobManager {
                     elapsed_ms: None,
                     finished_at: None,
                     larger: false,
+                    speed: None,
+                    eta_secs: None,
                     settings: Some(Arc::new(settings)),
                 };
                 created.push(job.clone());
@@ -279,9 +285,11 @@ impl JobManager {
         self.update(id, |j| j.output_path = Some(final_path.to_string_lossy().to_string())).await;
 
         let mgr = self.clone();
-        let progress = move |p: f32| {
+        let progress = move |p: f32, speed: Option<f32>, eta: Option<f64>| {
             let mgr = mgr.clone();
-            tokio::spawn(async move { mgr.update(id, |j| j.progress = p.clamp(0.0, 99.9)).await });
+            tokio::spawn(async move {
+                mgr.update(id, |j| { j.progress = p.clamp(0.0, 99.9); j.speed = speed; j.eta_secs = eta; }).await
+            });
         };
 
         let run_res: Result<Option<(u32, u32)>, String> = match info.kind {
@@ -337,7 +345,7 @@ impl JobManager {
                 let info2 = info.clone();
                 let s2 = s.image.clone();
                 let tmp2 = tmp.clone();
-                progress(15.0);
+                progress(15.0, None, None);
                 // Image encoding is CPU-bound and can't be interrupted; wait for it, then discard if cancelled.
                 let handle = tokio::task::spawn_blocking(move || image_enc::compress(&tools2, &info2, &s2, &tmp2));
                 let r = handle.await.map_err(|e| e.to_string()).and_then(|r| r).map(Some);
@@ -419,7 +427,7 @@ async fn run_ffmpeg(
     duration: Option<f64>,
     from: f32,
     to: f32,
-    progress: &(dyn Fn(f32) + Send + Sync),
+    progress: &(dyn Fn(f32, Option<f32>, Option<f64>) + Send + Sync),
     cancel: &Notify,
     cancelled: &AtomicBool,
 ) -> Result<(), String> {
@@ -445,16 +453,27 @@ async fn run_ffmpeg(
     });
     let mut lines = BufReader::new(stdout).lines();
     let mut last_emit = Instant::now();
+    let mut speed: Option<f32> = None;
+    let mut out_us: i64 = 0;
     loop {
         tokio::select! {
             line = lines.next_line() => {
                 match line {
                     Ok(Some(l)) => {
-                        if let Some(v) = l.strip_prefix("out_time_us=").or_else(|| l.strip_prefix("out_time_ms=")) {
-                            if let (Ok(us), Some(d)) = (v.trim().parse::<i64>(), duration) {
-                                if d > 0.0 && us >= 0 && last_emit.elapsed().as_millis() > 120 {
-                                    let frac = ((us as f64) / 1_000_000.0 / d).clamp(0.0, 1.0) as f32;
-                                    progress(from + (to - from) * frac);
+                        if let Some(v) = l.strip_prefix("speed=") {
+                            speed = v.trim().trim_end_matches('x').parse::<f32>().ok().filter(|s| *s > 0.0);
+                        } else if let Some(v) = l.strip_prefix("out_time_us=").or_else(|| l.strip_prefix("out_time_ms=")) {
+                            if let Ok(us) = v.trim().parse::<i64>() { out_us = us.max(0); }
+                        } else if l.starts_with("progress=") {
+                            // One block per progress tick; emit once per block.
+                            if let Some(d) = duration.filter(|d| *d > 0.0) {
+                                if last_emit.elapsed().as_millis() > 150 {
+                                    let done_s = (out_us as f64) / 1_000_000.0;
+                                    let frac = (done_s / d).clamp(0.0, 1.0) as f32;
+                                    // ETA covers the remaining share of *this* pass plus any following pass.
+                                    let passes_left = ((100.0 - to) / (to - from).max(1.0)) as f64;
+                                    let eta = speed.map(|sp| ((d - done_s).max(0.0) + passes_left * d) / sp as f64);
+                                    progress(from + (to - from) * frac, speed, eta);
                                     last_emit = Instant::now();
                                 }
                             }
@@ -498,7 +517,7 @@ async fn run_gs(
     gs: &Path,
     args: &[String],
     pages: Option<u32>,
-    progress: &(dyn Fn(f32) + Send + Sync),
+    progress: &(dyn Fn(f32, Option<f32>, Option<f64>) + Send + Sync),
     cancel: &Notify,
     cancelled: &AtomicBool,
 ) -> Result<(), String> {
@@ -529,9 +548,9 @@ async fn run_gs(
                     if l.trim_start().starts_with("Page ") {
                         page += 1;
                         if let Some(total) = pages.filter(|t| *t > 0) {
-                            progress((page as f32 / total as f32) * 100.0);
+                            progress((page as f32 / total as f32) * 100.0, None, None);
                         } else {
-                            progress(((page as f32) * 3.0).min(90.0));
+                            progress(((page as f32) * 3.0).min(90.0), None, None);
                         }
                     }
                 }

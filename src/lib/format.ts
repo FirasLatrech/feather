@@ -41,3 +41,12 @@ export function extOf(path: string): string {
 export function basename(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
+
+export function fmtEta(secs: number | null | undefined): string {
+  if (secs == null || !isFinite(secs)) return "";
+  if (secs < 5) return "a few seconds";
+  if (secs < 60) return `${Math.round(secs)} s left`;
+  if (secs < 3600) return `${Math.ceil(secs / 60)} min left`;
+  const h = Math.floor(secs / 3600), m = Math.round((secs % 3600) / 60);
+  return `${h} h ${m} min left`;
+}

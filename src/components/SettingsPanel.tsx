@@ -42,7 +42,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
       </div>
       <div className="sidebar-body">
         {showVideo && (
-          <Group icon={<RiFilmLine size={14} />} title="Video" summary={`${qLabel[v.quality]} · ${v.codec.toUpperCase()}`} defaultOpen={first === "video"}>
+          <Group icon={<RiFilmLine size={14} />} title="Video" summary={`${qLabel[v.quality]} · ${v.codec === "auto" ? "Auto" : v.codec.toUpperCase()}${v.hw_accel ? " · HW" : ""}`} defaultOpen={first === "video"}>
             <Field label="Quality" hint={v.target_size_mb ? "Ignored while a target size is set" : undefined}>
               <QualityPicker value={v.quality} onChange={(quality) => setVideo({ quality })} />
             </Field>
@@ -56,10 +56,10 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
             </Field>
             {v.format !== "gif" && v.format !== "mp3" && (
               <>
-                <Field label="Codec" hint={v.format === "webm" ? "WebM uses VP9 or AV1" : "H.265 / AV1: 30–50% smaller than H.264, slower to encode"}>
-                  <Segmented value={v.codec} options={[{ value: "h264", label: "H.264" }, { value: "h265", label: "H.265" }, { value: "vp9", label: "VP9" }, { value: "av1", label: "AV1" }]} onChange={(codec) => setVideo({ codec })} />
+                <Field label="Codec" hint={v.codec === "auto" ? "Keeps the source codec (HEVC stays HEVC) — best size and speed" : v.format === "webm" ? "WebM uses VP9 or AV1" : "H.265 / AV1: 30–50% smaller than H.264"}>
+                  <Segmented value={v.codec} options={[{ value: "auto", label: "Auto" }, { value: "h264", label: "H.264" }, { value: "h265", label: "H.265" }, { value: "vp9", label: "VP9" }, { value: "av1", label: "AV1" }]} onChange={(codec) => setVideo({ codec })} />
                 </Field>
-                {isMac && (v.codec === "h264" || v.codec === "h265") && (
+                {isMac && (v.codec === "auto" || v.codec === "h264" || v.codec === "h265") && (
                   <Field label="Hardware encoding" row hint="Apple VideoToolbox · much faster">
                     <Toggle value={v.hw_accel} onChange={(hw_accel) => setVideo({ hw_accel })} />
                   </Field>

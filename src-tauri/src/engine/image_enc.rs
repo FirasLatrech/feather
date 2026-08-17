@@ -124,7 +124,8 @@ pub fn compress(tools: &Tools, info: &MediaInfo, s: &ImageSettings, out: &Path) 
                     enc.write_image(rgb.as_raw(), w, h, image::ExtendedColorType::Rgb8).map_err(|e| e.to_string())?;
                 }
             }
-            let level = match s.quality { Quality::Highest => 2, Quality::High => 3, _ => 4 };
+            // Preset 2 is within ~1-2% of preset 4 but several times faster.
+            let level = match s.quality { Quality::Highest => 3, _ => 2 };
             let mut opts = oxipng::Options::from_preset(level);
             opts.strip = if s.keep_metadata { oxipng::StripChunks::None } else { oxipng::StripChunks::Safe };
             opts.optimize_alpha = true;
@@ -142,7 +143,7 @@ pub fn compress(tools: &Tools, info: &MediaInfo, s: &ImageSettings, out: &Path) 
             let res = ravif::Encoder::new()
                 .with_quality(q_avif(s.quality))
                 .with_alpha_quality(q_avif(s.quality))
-                .with_speed(6)
+                .with_speed(if s.quality == Quality::Highest { 6 } else { 8 })
                 .encode_rgba(im)
                 .map_err(|e| e.to_string())?;
             res.avif_file

@@ -1,6 +1,6 @@
 export type MediaKind = "video" | "image" | "gif" | "pdf" | "unknown";
 export type Quality = "highest" | "high" | "good" | "medium" | "acceptable";
-export type VideoCodec = "h264" | "h265" | "vp9" | "av1";
+export type VideoCodec = "auto" | "h264" | "h265" | "vp9" | "av1";
 export type VideoFormat = "same" | "mp4" | "webm" | "mov" | "mkv" | "gif" | "mp3";
 export type ImageFormat = "same" | "jpg" | "png" | "webp" | "avif";
 export type ResizeMode = "none" | "width" | "height" | "longedge" | "shortedge" | "percent";
@@ -66,6 +66,7 @@ export interface OutputSettings {
   skip_if_larger: boolean;
 }
 export interface Settings {
+  version: number;
   video: VideoSettings;
   image: ImageSettings;
   gif: GifSettings;
@@ -90,6 +91,8 @@ export interface Job {
   elapsed_ms: number | null;
   finished_at: number | null;
   larger: boolean;
+  speed: number | null;
+  eta_secs: number | null;
 }
 
 export interface HistoryItem {

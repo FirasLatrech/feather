@@ -19,7 +19,8 @@ struct AppState {
 fn load_settings(path: &Path) -> Settings {
     std::fs::read(path)
         .ok()
-        .and_then(|b| serde_json::from_slice(&b).ok())
+        .and_then(|b| serde_json::from_slice::<Settings>(&b).ok())
+        .map(Settings::migrate)
         .unwrap_or_default()
 }
 

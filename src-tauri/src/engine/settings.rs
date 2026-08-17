@@ -14,7 +14,10 @@ pub enum Quality {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum VideoCodec {
+    /// Keep the source codec family (HEVC stays HEVC, everything else → H.264). Best default:
+    /// re-encoding HEVC to H.264 usually makes files *bigger*.
     #[default]
+    Auto,
     H264,
     H265,
     Vp9,
@@ -109,9 +112,10 @@ impl Default for VideoSettings {
     fn default() -> Self {
         Self {
             quality: Quality::Good,
-            codec: VideoCodec::H264,
+            codec: VideoCodec::Auto,
             format: VideoFormat::Same,
-            hw_accel: false,
+            // Hardware encoding is 5-10x faster; on by default where available (macOS VideoToolbox).
+            hw_accel: cfg!(target_os = "macos"),
             resize: Resize::default(),
             fps: None,
             remove_audio: false,
@@ -208,6 +212,8 @@ impl Default for OutputSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    /// Bumped when defaults change in a way existing settings files should adopt.
+    pub version: u32,
     pub video: VideoSettings,
     pub image: ImageSettings,
     pub gif: GifSettings,
@@ -221,6 +227,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            version: SETTINGS_VERSION,
             video: Default::default(),
             image: Default::default(),
             gif: Default::default(),
@@ -231,5 +238,20 @@ impl Default for Settings {
             ffmpeg_path: None,
             gs_path: None,
         }
+    }
+}
+
+pub const SETTINGS_VERSION: u32 = 2;
+
+impl Settings {
+    /// Apply forward migrations to a settings file loaded from disk.
+    pub fn migrate(mut self) -> Self {
+        if self.version < 2 {
+            // v2: hardware encoding + Auto codec became the defaults (5-10x faster, smaller HEVC output).
+            self.video.hw_accel = cfg!(target_os = "macos");
+            self.video.codec = VideoCodec::Auto;
+        }
+        self.version = SETTINGS_VERSION;
+        self
     }
 }

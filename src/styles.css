@@ -324,3 +324,13 @@ dialog.dlg .actions { display: flex; justify-content: flex-end; gap: 8px; }
 .tools-row .t { font-weight: 600; }
 .tools-row .s { color: var(--fg-3); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tools-row .progress { max-width: 360px; }
+
+/* Browser-preview "framed" mode: macOS desktop + window chrome (for demos/recordings only) */
+.desktop { position: fixed; inset: 0; background: #1b1b1f url("/demo/wallpaper.jpg") center / cover no-repeat; display: grid; place-items: center; }
+.app.framed { position: relative; width: min(1180px, calc(100vw - 80px)); height: min(740px, calc(100vh - 60px)); border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(40px) saturate(1.4); box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 30px 90px rgba(0,0,0,.45), 0 4px 14px rgba(0,0,0,.25); }
+.app.framed .titlebar { background: transparent; }
+.app.framed .traffic { position: absolute; left: 14px; top: 18px; display: flex; gap: 8px; z-index: 5; }
+.app.framed .traffic i { width: 12px; height: 12px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.15); }
+.app.framed .traffic i:nth-child(1) { background: #ff5f57; }
+.app.framed .traffic i:nth-child(2) { background: #febc2e; }
+.app.framed .traffic i:nth-child(3) { background: #28c840; }

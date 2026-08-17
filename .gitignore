@@ -27,3 +27,8 @@ dist-ssr
 src-tauri/target
 src-tauri/gen/schemas
 src-tauri/binaries
+trailer/out
+trailer/node_modules
+showcase/out
+showcase/rec
+showcase/node_modules

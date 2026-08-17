@@ -40,7 +40,7 @@ export function FileCard({ file }: { file: MediaInfo }) {
 
         {!status && est?.size != null && (
           <div className="result est">
-            <span className="sizes">≈ <b>{fmtBytes(est.size)}</b>{est.time != null && <span className="dim">· ~{fmtEta(est.time).replace(" left", "")}</span>}</span>
+            <span className="sizes">≈ <b>{fmtBytes(est.size)}</b>{est.time != null && <span className="dim">· {est.time < 5 ? "instant" : `~${fmtEta(est.time).replace(" left", "")}`}</span>}</span>
             {est.already_small
               ? <span className="pill warn" title="This file is already efficiently compressed; expect little or no reduction">already small</span>
               : <span className="pill muted">−{savings(file.size, est.size)}%</span>}

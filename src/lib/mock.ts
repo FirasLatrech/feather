@@ -33,18 +33,18 @@ const SAMPLES: MediaInfo[] = [
   { path: "/Users/demo/Downloads/reaction.gif", name: "reaction.gif", kind: "gif", size: 8_812_000, duration: 4.2, width: 800, height: 450, fps: 20, has_audio: false, video_codec: null, audio_codec: null, bitrate: null },
 ];
 const THUMBS: Record<string, string> = {
-  [SAMPLES[0].path]: "https://picsum.photos/seed/keynote/640/400",
-  [SAMPLES[1].path]: "https://picsum.photos/seed/heic/640/400",
-  [SAMPLES[2].path]: "https://picsum.photos/seed/deck/640/400",
-  [SAMPLES[3].path]: "https://picsum.photos/seed/screen/640/400",
-  [SAMPLES[4].path]: "https://picsum.photos/seed/hero/640/400",
-  [SAMPLES[5].path]: "https://picsum.photos/seed/gif/640/400",
+  [SAMPLES[0].path]: "https://picsum.photos/id/1011/640/400",
+  [SAMPLES[1].path]: "https://picsum.photos/id/1015/640/400",
+  [SAMPLES[2].path]: "https://picsum.photos/id/180/640/400",
+  [SAMPLES[3].path]: "https://picsum.photos/id/0/640/400",
+  [SAMPLES[4].path]: "https://picsum.photos/id/1043/640/400",
+  [SAMPLES[5].path]: "https://picsum.photos/id/1025/640/400",
 };
 
 function uuid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
 export const mockApi = {
-  getTools: async (): Promise<Tools> => ({ ffmpeg: "/opt/homebrew/bin/ffmpeg", ffprobe: "/opt/homebrew/bin/ffprobe", ghostscript: null }),
+  getTools: async (): Promise<Tools> => ({ ffmpeg: "/opt/homebrew/bin/ffmpeg", ffprobe: "/opt/homebrew/bin/ffprobe", ghostscript: new URLSearchParams(location.search).get("gs") ? "/opt/homebrew/bin/gs" : null }),
   probePaths: async (paths: string[]) => paths.length ? SAMPLES.filter((s) => paths.includes(s.path)) : SAMPLES,
   getSettings: async () => structuredClone(settings),
   saveSettings: async (s: Settings) => { settings = s; },
@@ -56,8 +56,9 @@ export const mockApi = {
       // Static snapshot for screenshots (headless Chrome throttles timers).
       created.forEach((j, i) => {
         const ratio = j.input.kind === "pdf" ? 0.22 : j.input.kind === "video" ? 0.35 : 0.48;
-        const isDone = demo === "done" ? j.input.kind !== "pdf" : i < 2;
-        const isFail = demo === "done" && j.input.kind === "pdf";
+        const hasGs = !!new URLSearchParams(location.search).get("gs");
+        const isDone = demo === "done" ? (j.input.kind !== "pdf" || hasGs) : i < 2;
+        const isFail = demo === "done" && j.input.kind === "pdf" && !hasGs;
         const isRun = demo === "running" && (i === 2 || i === 3);
         jobs[j.id] = isDone
           ? { ...j, status: "done", progress: 100, output_size: Math.round(j.input.size * ratio), output_path: j.input.path.replace(/(\.[^.]+)$/, "_compressed$1"), output_width: j.input.width, output_height: j.input.height, elapsed_ms: 4200 + i * 900, finished_at: Date.now() }

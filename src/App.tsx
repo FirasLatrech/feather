@@ -45,9 +45,11 @@ export default function App() {
   }, [addPaths, setView]);
 
   if (!ready) return <div className="app" />;
+  const framed = !isTauri && new URLSearchParams(location.search).get("frame");
 
-  return (
-    <div className="app">
+  const app = (
+    <div className={`app${framed ? " framed" : ""}`}>
+      {framed && <div className="traffic"><i /><i /><i /></div>}
       <header className="titlebar" data-tauri-drag-region>
         <div className="brand" data-tauri-drag-region>
           <img className="logo" src="/feather-logo.png" alt="" width={24} height={24} draggable={false} />
@@ -70,4 +72,5 @@ export default function App() {
       )}
     </div>
   );
+  return framed ? <div className="desktop">{app}</div> : app;
 }

@@ -137,3 +137,10 @@ export interface Estimate {
   time: number | null;
   already_small: boolean;
 }
+
+export interface InstallEvent {
+  tool: "ffmpeg" | "ghostscript" | string;
+  phase: "downloading" | "extracting" | "installing" | "done" | "error";
+  percent: number | null;
+  message: string;
+}

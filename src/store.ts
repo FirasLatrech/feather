@@ -7,7 +7,7 @@ const listen: typeof tauriListen = isTauri ? tauriListen : (mockListen as unknow
 const convertFileSrc = isTauri ? tauriConvert : mockConvertFileSrc;
 import { api } from "./lib/api";
 import { notify } from "./lib/notify";
-import type { Estimate, Job, MediaInfo, Settings, Tools } from "./lib/types";
+import type { Estimate, InstallEvent, Job, MediaInfo, Settings, Tools } from "./lib/types";
 
 export type View = "compress" | "history" | "settings";
 
@@ -23,6 +23,8 @@ interface State {
   tools: Tools | null;
   thumbs: Record<string, string>;
   estimates: Record<string, Estimate>;
+  installs: Record<string, InstallEvent>;
+  installTool: (tool: "ffmpeg" | "ghostscript") => Promise<void>;
   refreshEstimates: () => Promise<void>;
   dragging: boolean;
   adding: boolean;
@@ -57,6 +59,7 @@ export const useStore = create<State>((set, get) => ({
   tools: null,
   thumbs: {},
   estimates: {},
+  installs: {},
   dragging: false,
   adding: false,
 
@@ -101,6 +104,11 @@ export const useStore = create<State>((set, get) => ({
         if (!stillActive) void notify(all);
       }
     });
+    await listen<InstallEvent>("tool:install", (e) => {
+      set((s) => ({ installs: { ...s.installs, [e.payload.tool]: e.payload } }));
+      if (e.payload.phase === "done") setTimeout(() => set((s) => { const i = { ...s.installs }; delete i[e.payload.tool]; return { installs: i }; }), 2500);
+    });
+    await listen("tools:changed", () => { void get().refreshTools(); });
     // Files handed to us by Finder (Open With / Quick Action / CLI).
     await listen<string[]>("files:opened", (e) => { void get().addPaths(e.payload); });
     if (isTauri) {
@@ -219,6 +227,11 @@ export const useStore = create<State>((set, get) => ({
     } catch {
       /* ignore */
     }
+  },
+
+  installTool: async (tool) => {
+    set((s) => ({ installs: { ...s.installs, [tool]: { tool, phase: "downloading", percent: 0, message: "Starting…" } } }));
+    await api.installTool(tool);
   },
 
   refreshEstimates: async () => {

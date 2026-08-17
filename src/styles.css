@@ -315,3 +315,12 @@ dialog.dlg .actions { display: flex; justify-content: flex-end; gap: 8px; }
 /* Code rows (MCP config) */
 .code-row { display: flex; align-items: flex-start; gap: 8px; }
 .code-row code, .code-row pre { flex: 1; min-width: 0; margin: 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; padding: 8px 10px; border-radius: var(--r-sm); background: var(--bg-elev); border: 1px solid var(--line); overflow-x: auto; white-space: pre; user-select: text; }
+
+/* Tools banner */
+.tools-banner { display: flex; flex-direction: column; gap: 1px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.tools-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+.tools-row .ti { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--bg-elev); border: 1px solid var(--line); color: var(--fg-2); flex-shrink: 0; }
+.tools-row .tt { flex: 1; min-width: 0; }
+.tools-row .t { font-weight: 600; }
+.tools-row .s { color: var(--fg-3); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tools-row .progress { max-width: 360px; }

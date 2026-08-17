@@ -9,7 +9,7 @@ import { OutputSection } from "../components/SettingsPanel";
 import { applyTheme, getTheme, type Theme } from "../lib/theme";
 
 export function SettingsView() {
-  const { settings, updateSettings, tools, refreshTools } = useStore();
+  const { settings, updateSettings, tools, refreshTools, installs, installTool } = useStore();
   const [theme, setThemeState] = useState<Theme>(getTheme());
   const [qa, setQa] = useState<string>("");
   const [cli, setCli] = useState<string | null>(null);
@@ -32,15 +32,21 @@ export function SettingsView() {
     if (dirs.downloads) addFolders([dirs.downloads]); else if (!isTauri) addFolders(["/Users/demo/Downloads"]);
   };
 
-  const ToolRow = ({ name, path, hint }: { name: string; path: string | null; hint: string }) => (
-    <div className="tool-status">
-      <div>
-        <div className="n">{name}</div>
-        <code>{path ?? hint}</code>
+  const ToolRow = ({ name, path, hint, tool }: { name: string; path: string | null; hint: string; tool?: "ffmpeg" | "ghostscript" }) => {
+    const inst = tool ? installs[tool] : undefined;
+    return (
+      <div className="tool-status">
+        <div style={{ minWidth: 0 }}>
+          <div className="n">{name}</div>
+          <code>{path ?? (inst ? inst.message : hint)}</code>
+        </div>
+        {path ? <span className="pill ok"><RiCheckboxCircleFill size={12} /> Installed</span>
+          : inst && inst.phase !== "error" ? <span className="pill accent">{inst.percent != null ? `${Math.round(inst.percent)}%` : "Installing…"}</span>
+          : tool ? <button className="btn sm primary" onClick={() => installTool(tool)}>{tool === "ffmpeg" ? "Download" : "Install"}</button>
+          : <span className="pill err"><RiCloseCircleFill size={12} /> Missing</span>}
       </div>
-      {path ? <span className="pill ok"><RiCheckboxCircleFill size={12} /> Installed</span> : <span className="pill err"><RiCloseCircleFill size={12} /> Missing</span>}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="page">
@@ -135,9 +141,9 @@ export function SettingsView() {
 
         <div className="section-title">Engine</div>
         <div className="panel">
-          <ToolRow name="FFmpeg" path={tools?.ffmpeg ?? null} hint={isMac ? "brew install ffmpeg" : "Install FFmpeg and add it to PATH"} />
-          <ToolRow name="ffprobe" path={tools?.ffprobe ?? null} hint="Ships with FFmpeg" />
-          <ToolRow name="Ghostscript · PDF" path={tools?.ghostscript ?? null} hint={isMac ? "brew install ghostscript" : "Install Ghostscript"} />
+          <ToolRow name="FFmpeg" path={tools?.ffmpeg ?? null} hint="Not installed — Feather can download it" tool="ffmpeg" />
+          <ToolRow name="ffprobe" path={tools?.ffprobe ?? null} hint="Comes with the FFmpeg download" />
+          <ToolRow name="Ghostscript · PDF" path={tools?.ghostscript ?? null} hint={isMac ? "Not installed — Feather can install it via Homebrew" : "Not installed"} tool="ghostscript" />
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button className="btn sm" onClick={refreshTools}><RiRefreshLine size={13} /> Re-detect</button>
           </div>

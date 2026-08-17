@@ -5,6 +5,7 @@ import { RiAddLine, RiFolderAddLine, RiDeleteBinLine, RiFlashlightLine, RiForbid
 import { useStore } from "../store";
 import { FileCard } from "../components/FileCard";
 import { SettingsPanel } from "../components/SettingsPanel";
+import { ToolsBanner } from "../components/ToolsBanner";
 import { fmtBytes } from "../lib/format";
 import type { MediaKind } from "../lib/types";
 import { isTauri } from "../lib/tauri";
@@ -59,6 +60,7 @@ export function CompressView() {
   return (
     <div className="main">
       <div className="content">
+        <ToolsBanner />
         {files.length === 0 ? (
           <div className="empty">
             <div className={`dropzone${dragging ? " active" : ""}`}>

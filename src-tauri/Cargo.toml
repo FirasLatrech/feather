@@ -41,6 +41,12 @@ notify = "8"
 mozjpeg = "0.10"
 clap = { version = "4", features = ["derive"] }
 dirs = "6"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+futures-util = "0.3"
+tar = "0.4"
+flate2 = "1"
+xz2 = "0.1"
 
 # Dev builds: keep our crate fast to compile but optimise dependencies (image/oxipng/ravif are 10-50x
 # slower unoptimised — that's what makes `tauri dev` image compression feel slow).

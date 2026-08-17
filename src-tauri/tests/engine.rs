@@ -267,3 +267,19 @@ fn quick_action_workflow_is_valid_plist() {
         assert!(out.status.success(), "{f}: {}", String::from_utf8_lossy(&out.stdout));
     }
 }
+
+/// Real network test of the FFmpeg self-installer (skipped unless FEATHER_NET=1).
+#[tokio::test]
+async fn ffmpeg_self_install_downloads_and_runs() {
+    if std::env::var("FEATHER_NET").is_err() { return; }
+    let dir = std::env::temp_dir().join("feather-install-test");
+    let _ = std::fs::remove_dir_all(&dir);
+    let report = |e: feather_lib::engine::install::InstallEvent| eprintln!("{:?} {:?} {}", e.phase, e.percent, e.message);
+    let paths = feather_lib::engine::install::install_ffmpeg(&dir, &report).await.unwrap();
+    assert!(paths.iter().any(|p| p.ends_with("ffmpeg")), "{paths:?}");
+    assert!(paths.iter().any(|p| p.ends_with("ffprobe")), "{paths:?}");
+    let t = feather_lib::engine::Tools::detect_with_dir(&dir);
+    assert_eq!(t.ffmpeg.as_deref(), Some(dir.join("ffmpeg").as_path()));
+    let out = std::process::Command::new(&dir.join("ffprobe")).arg("-version").output().unwrap();
+    assert!(out.status.success());
+}

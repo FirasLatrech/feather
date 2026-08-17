@@ -111,5 +111,9 @@ export const mockApi = {
   takeOpenedFiles: async () => [],
   installQuickAction: async () => "/Users/demo/Library/Services/Compress with Feather.workflow",
   cliPath: async () => "/Applications/Feather.app/Contents/MacOS/feather-cli",
+  installTool: async (tool: string) => {
+    let p = 0;
+    const t = setInterval(() => { p += 7; emit("tool:install", { tool, phase: p < 90 ? "downloading" : p < 100 ? "extracting" : "done", percent: Math.min(100, p), message: p < 100 ? `Downloading ${tool} · ${(p * 0.28).toFixed(1)} MB` : `${tool} installed` }); if (p >= 100) clearInterval(t); }, 300);
+  },
 };
 export const mockConvertFileSrc = (p: string) => p;

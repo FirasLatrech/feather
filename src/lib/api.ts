@@ -24,6 +24,7 @@ const real = {
   takeOpenedFiles: () => invoke<string[]>("take_opened_files"),
   installQuickAction: () => invoke<string>("install_quick_action"),
   cliPath: () => invoke<string | null>("cli_path"),
+  installTool: (tool: "ffmpeg" | "ghostscript") => invoke<void>("install_tool", { tool }),
 };
 
 export const api: typeof real = isTauri ? real : (mockApi as unknown as typeof real);

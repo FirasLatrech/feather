@@ -1,6 +1,7 @@
 pub mod estimate;
 pub mod gif;
 pub mod image_enc;
+pub mod install;
 pub mod jobs;
 pub mod output;
 pub mod pdf;

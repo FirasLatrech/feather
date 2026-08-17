@@ -47,6 +47,17 @@ impl Tools {
             ghostscript: find(&["gs", "gswin64c", "gswin32c"]),
         }
     }
+    /// Like `detect`, but binaries Feather downloaded itself (in `bin_dir`) take precedence.
+    pub fn detect_with_dir(bin_dir: &std::path::Path) -> Self {
+        let own = |n: &str| {
+            let p = bin_dir.join(if cfg!(windows) { format!("{n}.exe") } else { n.to_string() });
+            if p.exists() { Some(p) } else { None }
+        };
+        let mut t = Self::detect();
+        if let Some(p) = own("ffmpeg") { t.ffmpeg = Some(p); }
+        if let Some(p) = own("ffprobe") { t.ffprobe = Some(p); }
+        t
+    }
     pub fn ffmpeg(&self) -> Result<&PathBuf, String> {
         self.ffmpeg.as_ref().ok_or_else(|| {
             "FFmpeg not found. Install it (brew install ffmpeg) or set the path in Settings.".into()

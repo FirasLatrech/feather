@@ -16,6 +16,8 @@ struct AppState {
     settings: std::sync::Arc<Mutex<Settings>>,
     settings_path: PathBuf,
     cache_dir: PathBuf,
+    bin_dir: PathBuf,
+    installing: std::sync::Arc<std::sync::Mutex<std::collections::HashSet<String>>>,
 }
 
 fn load_settings(path: &Path) -> Settings {
@@ -26,8 +28,8 @@ fn load_settings(path: &Path) -> Settings {
         .unwrap_or_default()
 }
 
-fn tools_with_overrides(s: &Settings) -> Tools {
-    let mut t = Tools::detect();
+fn tools_with_overrides(s: &Settings, bin_dir: &Path) -> Tools {
+    let mut t = Tools::detect_with_dir(bin_dir);
     if let Some(p) = s.ffmpeg_path.as_ref().filter(|p| !p.trim().is_empty()) {
         let p = PathBuf::from(p.trim());
         if p.exists() {
@@ -116,7 +118,7 @@ async fn save_settings(settings: Settings, state: State<'_, AppState>, mgr: Stat
     std::fs::write(&state.settings_path, serde_json::to_vec_pretty(&settings).map_err(|e| e.to_string())?)
         .map_err(|e| e.to_string())?;
     mgr.set_concurrency(settings.concurrency).await;
-    mgr.set_tools(tools_with_overrides(&settings)).await;
+    mgr.set_tools(tools_with_overrides(&settings, &state.bin_dir)).await;
     *state.settings.lock().await = settings;
     watcher.apply(state.settings.clone(), (*mgr).clone()).await;
     Ok(())
@@ -268,6 +270,38 @@ fn md5ish(s: &str) -> u64 {
     h
 }
 
+async fn install_tool_inner(app: AppHandle, tool: String) {
+    let state = app.state::<AppState>();
+    {
+        let mut set = state.installing.lock().unwrap();
+        if !set.insert(tool.clone()) { return; } // already running
+    }
+    let app2 = app.clone();
+    let report = move |e: engine::install::InstallEvent| { let _ = app2.emit("tool:install", e); };
+    let res = match tool.as_str() {
+        "ffmpeg" => engine::install::install_ffmpeg(&state.bin_dir, &report).await.map(|_| ()),
+        "ghostscript" => engine::install::install_ghostscript(&report).await,
+        _ => Err("unknown tool".into()),
+    };
+    if let Err(e) = res {
+        let _ = app.emit("tool:install", engine::install::InstallEvent { tool: tool.clone(), phase: engine::install::Phase::Error, percent: None, message: e });
+    } else {
+        // Re-detect and refresh the job manager's tools.
+        let settings = state.settings.lock().await.clone();
+        let mgr = app.state::<JobManager>();
+        mgr.set_tools(tools_with_overrides(&settings, &state.bin_dir)).await;
+        let _ = app.emit("tools:changed", ());
+    }
+    state.installing.lock().unwrap().remove(&tool);
+}
+
+/// Download / install a missing tool ("ffmpeg" | "ghostscript"). Progress via `tool:install` events.
+#[tauri::command]
+async fn install_tool(tool: String, app: AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn(async move { install_tool_inner(app, tool).await; });
+    Ok(())
+}
+
 /// Frontend pulls any files the OS handed us (Open With / Quick Action / CLI args).
 #[tauri::command]
 fn take_opened_files(state: State<'_, AppState>) -> Vec<String> {
@@ -408,7 +442,9 @@ pub fn run() {
             let cache_dir = app.path().app_cache_dir().unwrap_or_else(|_| config_dir.join("cache"));
             let settings_path = config_dir.join("settings.json");
             let settings = load_settings(&settings_path);
-            let tools = tools_with_overrides(&settings);
+            let bin_dir = engine::install::tools_dir(&app.path().app_data_dir().unwrap_or_else(|_| config_dir.clone()));
+            let tools = tools_with_overrides(&settings, &bin_dir);
+            let need_ffmpeg = tools.ffmpeg.is_none() || tools.ffprobe.is_none();
             let mgr = JobManager::new(app.handle().clone(), tools, settings.concurrency, config_dir.join("history.json"));
             let settings = std::sync::Arc::new(Mutex::new(settings));
             let watcher = std::sync::Arc::new(engine::watch::Watcher::new());
@@ -425,7 +461,13 @@ pub fn run() {
                 let args: Vec<String> = std::env::args().skip(1).filter(|a| std::path::Path::new(a).exists()).collect();
                 if !args.is_empty() { opened.lock().unwrap().extend(args); }
             }
-            app.manage(AppState { opened, settings, settings_path, cache_dir });
+            let installing = std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new()));
+            app.manage(AppState { opened, settings, settings_path, cache_dir, bin_dir: bin_dir.clone(), installing: installing.clone() });
+            if need_ffmpeg {
+                // First launch without FFmpeg: fetch it ourselves, no user action required.
+                let h = app.handle().clone();
+                tauri::async_runtime::spawn(async move { install_tool_inner(h, "ffmpeg".into()).await; });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -446,6 +488,7 @@ pub fn run() {
             take_opened_files,
             install_quick_action,
             cli_path,
+            install_tool,
             app_dirs
         ])
         .build(tauri::generate_context!())

@@ -1,0 +1,184 @@
+import { create } from "zustand";
+import { listen } from "@tauri-apps/api/event";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { api } from "./lib/api";
+import type { Job, MediaInfo, Settings, Tools } from "./lib/types";
+
+export type View = "compress" | "history" | "settings";
+
+interface State {
+  ready: boolean;
+  view: View;
+  files: MediaInfo[];
+  overrides: Record<string, Settings>;
+  selected: string | null;
+  jobs: Record<string, Job>;
+  jobByPath: Record<string, string>;
+  settings: Settings | null;
+  tools: Tools | null;
+  thumbs: Record<string, string>;
+  dragging: boolean;
+  adding: boolean;
+  init: () => Promise<void>;
+  setView: (v: View) => void;
+  addPaths: (paths: string[]) => Promise<void>;
+  removeFile: (path: string) => void;
+  clearFiles: () => void;
+  select: (path: string | null) => void;
+  setOverride: (path: string, s: Settings | null) => void;
+  updateSettings: (fn: (s: Settings) => Settings) => void;
+  compress: (paths?: string[]) => Promise<void>;
+  cancelJob: (id: string) => Promise<void>;
+  cancelAll: () => Promise<void>;
+  loadThumb: (path: string) => Promise<void>;
+  setDragging: (v: boolean) => void;
+  refreshTools: () => Promise<void>;
+}
+
+let saveTimer: number | undefined;
+
+export const useStore = create<State>((set, get) => ({
+  ready: false,
+  view: "compress",
+  files: [],
+  overrides: {},
+  selected: null,
+  jobs: {},
+  jobByPath: {},
+  settings: null,
+  tools: null,
+  thumbs: {},
+  dragging: false,
+  adding: false,
+
+  init: async () => {
+    const [settings, tools, jobs] = await Promise.all([api.getSettings(), api.getTools(), api.listJobs()]);
+    const jobMap: Record<string, Job> = {};
+    const jobByPath: Record<string, string> = {};
+    for (const j of jobs) {
+      jobMap[j.id] = j;
+      jobByPath[j.input.path] = j.id;
+    }
+    set({ settings, tools, jobs: jobMap, jobByPath, ready: true });
+    await listen<Job>("job:update", (e) => {
+      const j = e.payload;
+      set((s) => ({ jobs: { ...s.jobs, [j.id]: j }, jobByPath: { ...s.jobByPath, [j.input.path]: j.id } }));
+    });
+    await listen("jobs:changed", async () => {
+      const list = await api.listJobs();
+      const jobMap: Record<string, Job> = {};
+      const byPath: Record<string, string> = {};
+      for (const j of list) {
+        jobMap[j.id] = j;
+        byPath[j.input.path] = j.id;
+      }
+      set({ jobs: jobMap, jobByPath: byPath });
+    });
+  },
+
+  setView: (view) => set({ view }),
+
+  addPaths: async (paths) => {
+    if (!paths.length) return;
+    set({ adding: true });
+    try {
+      const infos = await api.probePaths(paths);
+      set((s) => {
+        const existing = new Set(s.files.map((f) => f.path));
+        const fresh = infos.filter((f) => !existing.has(f.path));
+        // Re-adding a file that already has a finished job: reset the job link so it can run again.
+        const jobByPath = { ...s.jobByPath };
+        for (const f of infos) delete jobByPath[f.path];
+        return { files: [...s.files, ...fresh], jobByPath, view: "compress" };
+      });
+      for (const f of infos) void get().loadThumb(f.path);
+    } finally {
+      set({ adding: false });
+    }
+  },
+
+  removeFile: (path) => {
+    const jobId = get().jobByPath[path];
+    if (jobId) void api.removeJob(jobId);
+    set((s) => {
+      const overrides = { ...s.overrides };
+      delete overrides[path];
+      return {
+        files: s.files.filter((f) => f.path !== path),
+        overrides,
+        selected: s.selected === path ? null : s.selected,
+      };
+    });
+  },
+
+  clearFiles: () => {
+    void api.cancelAll().then(() => api.clearFinished());
+    set({ files: [], overrides: {}, selected: null, jobByPath: {} });
+  },
+
+  select: (selected) => set({ selected }),
+
+  setOverride: (path, s) =>
+    set((st) => {
+      const overrides = { ...st.overrides };
+      if (s) overrides[path] = s;
+      else delete overrides[path];
+      return { overrides };
+    }),
+
+  updateSettings: (fn) => {
+    const cur = get().settings;
+    if (!cur) return;
+    const next = fn(cur);
+    set({ settings: next });
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => {
+      void api.saveSettings(next).then(() => get().refreshTools());
+    }, 300);
+  },
+
+  compress: async (paths) => {
+    const { files, overrides, jobs, jobByPath } = get();
+    const targets = files.filter((f) => {
+      if (paths && !paths.includes(f.path)) return false;
+      const j = jobByPath[f.path] ? jobs[jobByPath[f.path]] : undefined;
+      // Skip files already queued/running or done (unless re-requested explicitly)
+      if (!paths && j && (j.status === "queued" || j.status === "running" || j.status === "done")) return false;
+      return true;
+    });
+    if (!targets.length) return;
+    const ov: Record<string, Settings> = {};
+    for (const f of targets) if (overrides[f.path]) ov[f.path] = overrides[f.path];
+    const created = await api.startCompression(targets, ov);
+    set((s) => {
+      const jobMap = { ...s.jobs };
+      const byPath = { ...s.jobByPath };
+      for (const j of created) {
+        jobMap[j.id] = j;
+        byPath[j.input.path] = j.id;
+      }
+      return { jobs: jobMap, jobByPath: byPath };
+    });
+  },
+
+  cancelJob: (id) => api.cancelJob(id),
+  cancelAll: () => api.cancelAll(),
+
+  loadThumb: async (path) => {
+    if (get().thumbs[path]) return;
+    try {
+      const p = await api.thumbnail(path);
+      if (p) set((s) => ({ thumbs: { ...s.thumbs, [path]: convertFileSrc(p) } }));
+    } catch {
+      /* ignore */
+    }
+  },
+
+  setDragging: (dragging) => set({ dragging }),
+
+  refreshTools: async () => set({ tools: await api.getTools() }),
+}));
+
+export function useJobFor(path: string): Job | undefined {
+  return useStore((s) => (s.jobByPath[path] ? s.jobs[s.jobByPath[path]] : undefined));
+}

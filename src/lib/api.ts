@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { HistoryItem, Job, MediaInfo, Settings, Tools } from "./types";
+import type { Estimate, HistoryItem, Job, MediaInfo, Settings, Tools } from "./types";
 
 import { isTauri } from "./tauri";
 import { mockApi } from "./mock";
@@ -11,6 +11,7 @@ const real = {
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
   startCompression: (files: MediaInfo[], overrides: Record<string, Settings>) =>
     invoke<Job[]>("start_compression", { files, overrides }),
+  estimate: (files: MediaInfo[], overrides: Record<string, Settings>) => invoke<Estimate[]>("estimate", { files, overrides }),
   listJobs: () => invoke<Job[]>("list_jobs"),
   cancelJob: (id: string) => invoke<void>("cancel_job", { id }),
   cancelAll: () => invoke<void>("cancel_all"),

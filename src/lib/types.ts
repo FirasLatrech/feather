@@ -120,3 +120,10 @@ export const QUALITIES: { value: Quality; label: string; hint: string }[] = [
   { value: "medium", label: "Medium", hint: "Smaller" },
   { value: "acceptable", label: "Acceptable", hint: "Smallest" },
 ];
+
+export interface Estimate {
+  path: string;
+  size: number | null;
+  time: number | null;
+  already_small: boolean;
+}

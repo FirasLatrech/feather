@@ -7,7 +7,7 @@ const listen: typeof tauriListen = isTauri ? tauriListen : (mockListen as unknow
 const convertFileSrc = isTauri ? tauriConvert : mockConvertFileSrc;
 import { api } from "./lib/api";
 import { notify } from "./lib/notify";
-import type { Job, MediaInfo, Settings, Tools } from "./lib/types";
+import type { Estimate, Job, MediaInfo, Settings, Tools } from "./lib/types";
 
 export type View = "compress" | "history" | "settings";
 
@@ -22,6 +22,8 @@ interface State {
   settings: Settings | null;
   tools: Tools | null;
   thumbs: Record<string, string>;
+  estimates: Record<string, Estimate>;
+  refreshEstimates: () => Promise<void>;
   dragging: boolean;
   adding: boolean;
   init: () => Promise<void>;
@@ -41,6 +43,7 @@ interface State {
 }
 
 let saveTimer: number | undefined;
+let estTimer: number | undefined;
 
 export const useStore = create<State>((set, get) => ({
   ready: false,
@@ -53,6 +56,7 @@ export const useStore = create<State>((set, get) => ({
   settings: null,
   tools: null,
   thumbs: {},
+  estimates: {},
   dragging: false,
   adding: false,
 
@@ -116,6 +120,7 @@ export const useStore = create<State>((set, get) => ({
         return { files: [...s.files, ...fresh], jobByPath, view: "compress" };
       });
       for (const f of infos) void get().loadThumb(f.path);
+      void get().refreshEstimates();
     } finally {
       set({ adding: false });
     }
@@ -142,13 +147,16 @@ export const useStore = create<State>((set, get) => ({
 
   select: (selected) => set({ selected }),
 
-  setOverride: (path, s) =>
+  setOverride: (path, s) => {
     set((st) => {
       const overrides = { ...st.overrides };
       if (s) overrides[path] = s;
       else delete overrides[path];
       return { overrides };
-    }),
+    });
+    window.clearTimeout(estTimer);
+    estTimer = window.setTimeout(() => void get().refreshEstimates(), 250);
+  },
 
   updateSettings: (fn) => {
     const cur = get().settings;
@@ -157,7 +165,7 @@ export const useStore = create<State>((set, get) => ({
     set({ settings: next });
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => {
-      void api.saveSettings(next).then(() => get().refreshTools());
+      void api.saveSettings(next).then(() => { void get().refreshTools(); void get().refreshEstimates(); });
     }, 300);
   },
 
@@ -196,6 +204,17 @@ export const useStore = create<State>((set, get) => ({
     } catch {
       /* ignore */
     }
+  },
+
+  refreshEstimates: async () => {
+    const { files, overrides } = get();
+    if (!files.length) { set({ estimates: {} }); return; }
+    try {
+      const list = await api.estimate(files, overrides);
+      const estimates: Record<string, Estimate> = {};
+      for (const e of list) estimates[e.path] = e;
+      set({ estimates });
+    } catch { /* ignore */ }
   },
 
   setDragging: (dragging) => set({ dragging }),

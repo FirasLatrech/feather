@@ -93,6 +93,10 @@ export const mockApi = {
     }
     return created;
   },
+  estimate: async (files: MediaInfo[]) => files.map((f) => {
+    const ratio = f.kind === "pdf" ? 0.3 : f.kind === "video" ? (f.video_codec === "hevc" ? 0.92 : 0.35) : 0.5;
+    return { path: f.path, size: Math.round(f.size * ratio), time: f.kind === "video" ? (f.duration ?? 60) / 20 : 2, already_small: ratio > 0.9 };
+  }),
   listJobs: async () => Object.values(jobs),
   cancelJob: async (id: string) => { if (jobs[id]) { jobs[id] = { ...jobs[id], status: "cancelled" }; emit("job:update", jobs[id]); } },
   cancelAll: async () => { for (const id in jobs) if (jobs[id].status === "running" || jobs[id].status === "queued") { jobs[id] = { ...jobs[id], status: "cancelled" }; emit("job:update", jobs[id]); } },

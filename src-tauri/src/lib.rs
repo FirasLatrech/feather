@@ -139,6 +139,13 @@ async fn start_compression(
 }
 
 #[tauri::command]
+async fn estimate(files: Vec<MediaInfo>, overrides: Option<HashMap<String, Settings>>, state: State<'_, AppState>) -> Result<Vec<engine::estimate::Estimate>, String> {
+    let base = state.settings.lock().await.clone();
+    let overrides = overrides.unwrap_or_default();
+    Ok(files.iter().map(|f| engine::estimate::estimate(f, overrides.get(&f.path).unwrap_or(&base))).collect())
+}
+
+#[tauri::command]
 async fn list_jobs(mgr: State<'_, JobManager>) -> Result<Vec<Job>, String> {
     Ok(mgr.list().await)
 }
@@ -265,6 +272,7 @@ pub fn run() {
             get_settings,
             save_settings,
             start_compression,
+            estimate,
             list_jobs,
             cancel_job,
             cancel_all,

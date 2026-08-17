@@ -9,6 +9,7 @@ export function FileCard({ file }: { file: MediaInfo }) {
   const thumb = useStore((s) => s.thumbs[file.path]);
   const selected = useStore((s) => s.selected === file.path);
   const hasOverride = useStore((s) => !!s.overrides[file.path]);
+  const est = useStore((s) => s.estimates[file.path]);
   const { select, removeFile, cancelJob, compress } = useStore();
 
   const Icon = file.kind === "video" ? RiFilmLine : file.kind === "pdf" ? RiFilePdf2Line : file.kind === "gif" ? RiFileGifLine : RiImageLine;
@@ -36,6 +37,15 @@ export function FileCard({ file }: { file: MediaInfo }) {
           {dims && <span>{dims}</span>}
           {file.video_codec && file.kind === "video" && <span>{file.video_codec.toUpperCase()}</span>}
         </div>
+
+        {!status && est?.size != null && (
+          <div className="result est">
+            <span className="sizes">≈ <b>{fmtBytes(est.size)}</b>{est.time != null && <span className="dim">· ~{fmtEta(est.time).replace(" left", "")}</span>}</span>
+            {est.already_small
+              ? <span className="pill warn" title="This file is already efficiently compressed; expect little or no reduction">already small</span>
+              : <span className="pill muted">−{savings(file.size, est.size)}%</span>}
+          </div>
+        )}
 
         {running && (
           <>

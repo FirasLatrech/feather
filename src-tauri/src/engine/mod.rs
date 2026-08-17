@@ -1,3 +1,4 @@
+pub mod estimate;
 pub mod gif;
 pub mod image_enc;
 pub mod jobs;

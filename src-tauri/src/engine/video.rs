@@ -184,6 +184,19 @@ pub fn build_args(
         }
     }
 
+    // Bitrate-aware cap: if the source is already lower-bitrate than what this quality would
+    // produce, spend at most ~75% of the source bitrate. Guarantees a smaller file and avoids
+    // wasting time producing something bigger than the input.
+    let src_video_bps: Option<f64> = info.duration.filter(|d| *d > 0.0).map(|d| {
+        let total = info.bitrate.map(|b| b as f64).unwrap_or(info.size as f64 * 8.0 / d);
+        (total - if info.has_audio { 128_000.0 } else { 0.0 }).max(50_000.0)
+    });
+    let quality_bps = super::estimate::target_video_bitrate(info, &super::settings::Settings { video: s.clone(), ..Default::default() });
+    let cap_bps: Option<f64> = match (src_video_bps, quality_bps) {
+        (Some(src), Some(q)) if src * 0.75 < q => Some(src * 0.75),
+        _ => None,
+    };
+
     match codec {
         VideoCodec::Auto | VideoCodec::H264 | VideoCodec::H265 => {
             if use_hw {
@@ -191,6 +204,9 @@ pub fn build_args(
                 a.extend(["-c:v".into(), enc.into(), "-realtime".into(), "0".into(), "-prio_speed".into(), "1".into()]);
                 if let Some(bk) = target_bitrate_k {
                     a.extend(["-b:v".into(), format!("{bk}k")]);
+                } else if let Some(cap) = cap_bps {
+                    // VideoToolbox has no CRF+maxrate combo; use ABR at the cap.
+                    a.extend(["-b:v".into(), format!("{}k", (cap / 1000.0) as u64)]);
                 } else {
                     a.extend(["-q:v".into(), vt_quality(codec, s.quality).to_string()]);
                 }
@@ -212,6 +228,10 @@ pub fn build_args(
                     }
                 } else {
                     a.extend(["-crf".into(), crf(codec, s.quality).to_string()]);
+                    if let Some(cap) = cap_bps {
+                        let k = (cap / 1000.0) as u64;
+                        a.extend(["-maxrate".into(), format!("{k}k"), "-bufsize".into(), format!("{}k", k * 2)]);
+                    }
                     if codec == VideoCodec::H265 {
                         a.extend(["-x265-params".into(), "log-level=error".into()]);
                     }

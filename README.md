@@ -18,6 +18,29 @@ Drop files in, pick a quality, get smaller files. Nothing is uploaded, ever.
 - Per-file setting overrides, output folder / naming templates, replace-in-place, move to Trash, keep dates.
 - History with stats, notifications, light/dark theme.
 
+## CLI & MCP (AI agents)
+
+Feather ships `feather-cli` inside the app bundle (`Feather.app/Contents/MacOS/feather-cli`) — a command-line
+tool **and** an [MCP](https://modelcontextprotocol.io) server, so Claude, Cursor or any MCP client can compress
+files on your machine.
+
+```bash
+# Terminal
+feather-cli compress ~/Movies/*.mp4 --quality good --max 1920
+feather-cli compress photo.heic --format webp --out ~/Desktop
+feather-cli probe video.mov · feather-cli estimate *.png --quality medium · feather-cli history
+
+# Claude Code
+claude mcp add feather -- /Applications/Feather.app/Contents/MacOS/feather-cli mcp
+
+# Claude Desktop / Cursor (mcp.json)
+{ "mcpServers": { "feather": { "command": "/Applications/Feather.app/Contents/MacOS/feather-cli", "args": ["mcp"] } } }
+```
+
+MCP tools: `compress` (paths, quality, format, max, out, replace, no_audio, codec, target_mb — with progress
+notifications), `probe`, `estimate`, `history`. Destructive options (`replace`) are only applied when passed explicitly.
+Settings → *AI agents · MCP* shows the exact commands with copy buttons.
+
 ## Requirements
 
 - macOS 13+ (Apple Silicon or Intel)

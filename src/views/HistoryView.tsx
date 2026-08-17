@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FolderOpen, Trash2 } from "lucide-react";
+import { RiFolderOpenLine, RiDeleteBinLine } from "@remixicon/react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { api } from "../lib/api";
 import type { HistoryItem } from "../lib/types";
@@ -24,7 +24,7 @@ export function HistoryView() {
           <h1>History</h1>
           <p className="sub">Everything you've compressed on this device.</p>
         </div>
-        {items.length > 0 && <button className="btn ghost danger" onClick={async () => { await api.clearHistory(); setItems([]); }}><Trash2 size={14} /> Clear history</button>}
+        {items.length > 0 && <button className="btn ghost danger" onClick={async () => { await api.clearHistory(); setItems([]); }}><RiDeleteBinLine size={15} /> Clear history</button>}
       </div>
       <div className="stat-row">
         <div className="stat"><div className="k">Files compressed</div><div className="v">{stats.count}</div></div>
@@ -33,7 +33,7 @@ export function HistoryView() {
         <div className="stat"><div className="k">Average reduction</div><div className="v">{stats.pct}%</div></div>
       </div>
       {items.length === 0 ? (
-        <div className="panel" style={{ padding: 30, textAlign: "center", color: "var(--fg-3)" }}>Nothing yet. Compress something!</div>
+        <div className="panel" style={{ padding: 36, textAlign: "center", color: "var(--fg-3)" }}>Nothing yet — compress something.</div>
       ) : (
         <div className="panel" style={{ padding: 0, overflow: "auto" }}>
           <table className="hist">
@@ -50,7 +50,7 @@ export function HistoryView() {
                     <td>{s != null && <span className={`pill ${s > 0 ? "ok" : "warn"}`}>{s > 0 ? `−${s}%` : `+${Math.abs(s)}%`}</span>}</td>
                     <td className="num">{fmtElapsed(i.elapsed_ms)}</td>
                     <td style={{ color: "var(--fg-3)" }}>{new Date(i.finished_at).toLocaleString()}</td>
-                    <td><button className="icon-btn" title="Show in folder" onClick={() => void revealItemInDir(i.output_path)}><FolderOpen size={14} /></button></td>
+                    <td><button className="icon-btn" title="Show in folder" onClick={() => void revealItemInDir(i.output_path)}><RiFolderOpenLine size={15} /></button></td>
                   </tr>
                 );
               })}

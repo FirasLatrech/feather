@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { Feather, Plus } from "lucide-react";
+import { RiQuillPenLine, RiAddLine, RiSettings3Line, RiHistoryLine, RiFlashlightLine } from "@remixicon/react";
 import { useStore } from "./store";
 import { CompressView, pickFiles } from "./views/CompressView";
 import { HistoryView } from "./views/HistoryView";
@@ -48,22 +48,23 @@ export default function App() {
     <div className="app">
       <header className="titlebar" data-tauri-drag-region>
         <div className="brand" data-tauri-drag-region>
-          <span className="logo"><Feather size={14} /></span>
+          <span className="logo"><RiQuillPenLine size={15} /></span>
           <span data-tauri-drag-region>Feather</span>
         </div>
-        <div className="spacer" data-tauri-drag-region />
-        <nav className="tabs">
-          <button className={view === "compress" ? "active" : ""} onClick={() => setView("compress")}>Compress</button>
-          <button className={view === "history" ? "active" : ""} onClick={() => setView("history")}>History</button>
-          <button className={view === "settings" ? "active" : ""} onClick={() => setView("settings")}>Settings</button>
+        <nav className="nav">
+          <button className={view === "compress" ? "active" : ""} onClick={() => setView("compress")}><RiFlashlightLine size={15} /> Compress</button>
+          <button className={view === "history" ? "active" : ""} onClick={() => setView("history")}><RiHistoryLine size={15} /> History</button>
         </nav>
-        <button className="icon-btn" title="Add files (⌘O)" onClick={() => pickFiles(addPaths)}><Plus size={16} /></button>
+        <div className="right">
+          <button className="icon-btn" title="Add files (⌘O)" onClick={() => pickFiles(addPaths)}><RiAddLine size={18} /></button>
+          <button className={`icon-btn${view === "settings" ? " active" : ""}`} title="Settings (⌘,)" onClick={() => setView(view === "settings" ? "compress" : "settings")} style={view === "settings" ? { background: "var(--bg-sunken)", color: "var(--fg)" } : undefined}><RiSettings3Line size={18} /></button>
+        </div>
       </header>
       {view === "compress" && <CompressView />}
-      {view === "history" && <HistoryView />}
-      {view === "settings" && <SettingsView />}
+      {view === "history" && <div className="main"><HistoryView /></div>}
+      {view === "settings" && <div className="main"><SettingsView /></div>}
       {dragging && (
-        <div className="drop-overlay"><div className="box">Drop to add files</div></div>
+        <div className="drop-overlay"><div className="box"><RiAddLine size={20} /> Drop to add files</div></div>
       )}
     </div>
   );

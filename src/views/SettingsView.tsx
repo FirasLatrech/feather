@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiRefreshLine } from "@remixicon/react";
 import { useStore } from "../store";
 import { Field, NumberInput, Toggle } from "../components/Controls";
 import { OutputSection } from "../components/SettingsPanel";
@@ -10,8 +10,8 @@ export function SettingsView() {
   const row = (name: string, path: string | null, hint: string) => (
     <div className="tool-status">
       <div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
-          {path ? <CheckCircle2 size={15} color="var(--ok)" /> : <XCircle size={15} color="var(--err)" />} {name}
+        <div className="n">
+          {path ? <RiCheckboxCircleFill size={16} color="var(--ok)" /> : <RiCloseCircleFill size={16} color="var(--err)" />} {name}
         </div>
         <code>{path ?? hint}</code>
       </div>
@@ -24,8 +24,8 @@ export function SettingsView() {
 
       <div className="section-title">Engine</div>
       <div className="panel">
-        <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8 }}>
-          <button className="btn sm ghost" onClick={refreshTools}><RefreshCw size={12} /> Re-detect</button>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button className="btn sm ghost" onClick={refreshTools}><RiRefreshLine size={13} /> Re-detect</button>
         </div>
         {row("FFmpeg", tools?.ffmpeg ?? null, isMac ? "Not found — brew install ffmpeg" : "Not found — install FFmpeg and add it to PATH")}
         {row("ffprobe", tools?.ffprobe ?? null, "Not found — ships with FFmpeg")}

@@ -13,7 +13,7 @@ const MODES: { value: ResizeMode; label: string }[] = [
 export function ResizeControl({ value, onChange, presets }: { value: Resize; onChange: (r: Resize) => void; presets?: number[] }) {
   const p = presets ?? [3840, 2560, 1920, 1280, 1080, 720, 480];
   return (
-    <Field label="Resize" hint="Never upscales. Aspect ratio is always kept.">
+    <Field label="Resize" hint="Never upscales · aspect ratio kept">
       <div className="inline" style={{ gap: 8 }}>
         <select className="select" value={value.mode} onChange={(e) => onChange({ mode: e.target.value as ResizeMode, value: value.value || (e.target.value === "percent" ? 50 : 1920) })}>
           {MODES.map((m) => (

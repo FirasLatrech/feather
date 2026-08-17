@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { RiArrowDownSLine } from "@remixicon/react";
 import { QUALITIES, type Quality } from "../lib/types";
 
 export function Field({ label, hint, children, row, right }: { label: string; hint?: string; children?: ReactNode; row?: boolean; right?: ReactNode }) {
@@ -6,11 +7,26 @@ export function Field({ label, hint, children, row, right }: { label: string; hi
     <div className={`field${row ? " row" : ""}`}>
       <div className="label">
         <span>{label}</span>
-        {right}
+        {row && hint ? <span className="hint">{hint}</span> : right}
       </div>
       {children}
-      {hint && <div className="hint">{hint}</div>}
+      {!row && hint && <div className="hint">{hint}</div>}
     </div>
+  );
+}
+
+export function Group({ icon, title, summary, children, defaultOpen = true }: { icon: ReactNode; title: string; summary?: string; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className={`group${open ? " open" : ""}`}>
+      <button className="group-head" onClick={() => setOpen(!open)}>
+        <span className="gi">{icon}</span>
+        {title}
+        {!open && summary && <span className="summary">{summary}</span>}
+        <RiArrowDownSLine size={16} className="chev" style={{ marginLeft: open || !summary ? "auto" : 8 }} />
+      </button>
+      {open && <div className="group-body">{children}</div>}
+    </section>
   );
 }
 
@@ -32,7 +48,7 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: (v: bool
 
 export function QualityPicker({ value, onChange }: { value: Quality; onChange: (q: Quality) => void }) {
   return (
-    <div className="quality-grid">
+    <div className="quality">
       {QUALITIES.map((q) => (
         <button key={q.value} className={q.value === value ? "active" : ""} onClick={() => onChange(q.value)} title={q.hint}>
           <b>{q.label}</b>
@@ -59,7 +75,7 @@ export function NumberInput({ value, onChange, min, max, step, placeholder, suff
           onChange(v === "" ? null : Number(v));
         }}
       />
-      {suffix && <small style={{ color: "var(--fg-3)" }}>{suffix}</small>}
+      {suffix && <small style={{ color: "var(--fg-3)", minWidth: 22 }}>{suffix}</small>}
     </span>
   );
 }

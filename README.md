@@ -7,6 +7,12 @@ Drop files in, pick a quality, get smaller files. Nothing is uploaded, ever.
 
 <p align="center"><i>Video · Image · GIF · PDF — hardware-accelerated, batch, folder watching</i></p>
 
+## Download
+
+**[Latest release →](https://github.com/FirasLatrech/feather/releases/latest)** — macOS (Apple Silicon & Intel).
+Drag Feather to Applications; on first launch right-click → Open (not yet notarized).
+Needs [FFmpeg](https://ffmpeg.org) (`brew install ffmpeg`) and, for PDFs, Ghostscript (`brew install ghostscript`).
+
 ## Features
 
 - **Video** — H.264 / H.265 / VP9 / AV1, hardware encoding (Apple VideoToolbox) always on, target file size, resize, frame rate, trim, remove audio, video → GIF, extract MP3. Bitrate-aware: never spends more bits than the source.

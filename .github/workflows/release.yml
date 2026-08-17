@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest      # Apple Silicon
+            target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+          - os: macos-13          # Intel
+            target: x86_64-apple-darwin
+            args: --target x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "${{ matrix.target }}" }
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: src-tauri }
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build feather-cli (bundled sidecar)
+        run: |
+          cd src-tauri
+          mkdir -p binaries
+          : > binaries/feather-cli-${{ matrix.target }}
+          cargo build --release --bin feather-cli --target ${{ matrix.target }}
+          cp -f target/${{ matrix.target }}/release/feather-cli binaries/feather-cli-${{ matrix.target }}
+          chmod +x binaries/feather-cli-${{ matrix.target }}
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Feather ${{ github.ref_name }}"
+          releaseBody: |
+            Download the `.dmg` for your Mac (Apple Silicon = aarch64, Intel = x64), drag Feather to Applications.
+            First launch: right-click → Open (the app is not yet notarized).
+            Requires FFmpeg (`brew install ffmpeg`); Ghostscript for PDFs (`brew install ghostscript`).
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }} --config '{"build":{"beforeBuildCommand":"pnpm build"}}'

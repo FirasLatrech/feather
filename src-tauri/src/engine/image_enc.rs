@@ -100,11 +100,22 @@ pub fn compress(tools: &Tools, info: &MediaInfo, s: &ImageSettings, out: &Path) 
     let ext = output_ext(info, s);
     let bytes: Vec<u8> = match ext {
         "jpg" => {
+            // mozjpeg: progressive + trellis quantisation → ~20-30% smaller than baseline libjpeg at equal quality.
             let rgb = flatten_on_white(&img);
-            let mut buf = Cursor::new(Vec::new());
-            let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buf, q_jpeg(s.quality));
-            enc.write_image(rgb.as_raw(), w, h, image::ExtendedColorType::Rgb8).map_err(|e| e.to_string())?;
-            buf.into_inner()
+            let q = q_jpeg(s.quality);
+            let data: Vec<u8> = std::panic::catch_unwind(move || {
+                let mut comp = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
+                comp.set_size(w as usize, h as usize);
+                comp.set_quality(q as f32);
+                comp.set_progressive_mode();
+                comp.set_optimize_scans(true);
+                comp.set_use_scans_in_trellis(true);
+                let mut c = comp.start_compress(Vec::new()).map_err(|e| e.to_string())?;
+                c.write_scanlines(rgb.as_raw()).map_err(|e| e.to_string())?;
+                c.finish().map_err(|e| e.to_string())
+            })
+            .map_err(|_| "jpeg encoder panicked".to_string())??;
+            data
         }
         "png" => {
             // Reduce to 8-bit, drop alpha if fully opaque, then run oxipng (lossless).
@@ -150,6 +161,17 @@ pub fn compress(tools: &Tools, info: &MediaInfo, s: &ImageSettings, out: &Path) 
         }
         _ => return Err(format!("unsupported output format {ext}")),
     };
+    // Never hand back a bigger file when the format didn't change and nothing was resized:
+    // keep the original bytes instead (already as good as it gets).
+    let same_format = Path::new(&info.path)
+        .extension().and_then(|e| e.to_str())
+        .map(|e| { let e = e.to_ascii_lowercase(); e == ext || (ext == "jpg" && e == "jpeg") })
+        .unwrap_or(false);
+    let resized = (w, h) != (info.width.unwrap_or(w), info.height.unwrap_or(h));
+    if same_format && !resized && bytes.len() as u64 >= info.size {
+        std::fs::copy(&info.path, out).map_err(|e| e.to_string())?;
+        return Ok((w, h));
+    }
     std::fs::write(out, bytes).map_err(|e| e.to_string())?;
     Ok((w, h))
 }

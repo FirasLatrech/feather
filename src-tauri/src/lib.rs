@@ -60,7 +60,7 @@ fn collect_files(p: &Path, out: &mut Vec<PathBuf>, depth: usize) {
             entries.sort();
             for e in entries {
                 let name = e.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if name.starts_with('.') {
+                if name.starts_with('.') || (e.is_dir() && matches!(name, "node_modules" | "target" | "dist" | "build" | "Library")) {
                     continue;
                 }
                 collect_files(&e, out, depth + 1);

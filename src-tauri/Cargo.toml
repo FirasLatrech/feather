@@ -32,6 +32,7 @@ rgb = "0.8"
 filetime = "0.2"
 regex = "1"
 tauri-plugin-notification = "2"
+notify = "8"
 
 # Dev builds: keep our crate fast to compile but optimise dependencies (image/oxipng/ravif are 10-50x
 # slower unoptimised — that's what makes `tauri dev` image compression feel slow).

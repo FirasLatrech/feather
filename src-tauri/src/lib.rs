@@ -11,7 +11,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 struct AppState {
-    settings: Mutex<Settings>,
+    settings: std::sync::Arc<Mutex<Settings>>,
     settings_path: PathBuf,
     cache_dir: PathBuf,
 }
@@ -107,7 +107,7 @@ async fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
 }
 
 #[tauri::command]
-async fn save_settings(settings: Settings, state: State<'_, AppState>, mgr: State<'_, JobManager>) -> Result<(), String> {
+async fn save_settings(settings: Settings, state: State<'_, AppState>, mgr: State<'_, JobManager>, watcher: State<'_, std::sync::Arc<engine::watch::Watcher>>) -> Result<(), String> {
     if let Some(p) = state.settings_path.parent() {
         std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
     }
@@ -116,6 +116,7 @@ async fn save_settings(settings: Settings, state: State<'_, AppState>, mgr: Stat
     mgr.set_concurrency(settings.concurrency).await;
     mgr.set_tools(tools_with_overrides(&settings)).await;
     *state.settings.lock().await = settings;
+    watcher.apply(state.settings.clone(), (*mgr).clone()).await;
     Ok(())
 }
 
@@ -179,7 +180,7 @@ async fn clear_history(mgr: State<'_, JobManager>) -> Result<(), String> {
     Ok(())
 }
 
-/// Generate (and cache) a small JPEG thumbnail for a video/PDF/image; returns its path.
+/// Generate (and cache) a small JPEG thumbnail for a video/PDF/image; returns a data: URL.
 #[tauri::command]
 async fn thumbnail(path: String, state: State<'_, AppState>, mgr: State<'_, JobManager>) -> Result<Option<String>, String> {
     let p = PathBuf::from(&path);
@@ -187,41 +188,72 @@ async fn thumbnail(path: String, state: State<'_, AppState>, mgr: State<'_, JobM
     let mtime = meta.modified().ok().and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs()).unwrap_or(0);
     let key = format!("{:x}", md5ish(&format!("{path}|{mtime}|{}", meta.len())));
     let out = state.cache_dir.join("thumbs").join(format!("{key}.jpg"));
-    if out.exists() {
-        return Ok(Some(out.to_string_lossy().to_string()));
-    }
-    std::fs::create_dir_all(out.parent().unwrap()).map_err(|e| e.to_string())?;
-    let tools = mgr.tools().await;
-    let kind = kind_from_ext(&p);
-    let ok = match kind {
-        MediaKind::Video | MediaKind::Gif | MediaKind::Image => {
-            let ff = tools.ffmpeg()?;
-            let mut cmd = tokio::process::Command::new(ff);
-            cmd.args(["-hide_banner", "-y", "-nostdin", "-loglevel", "error"]);
-            if kind == MediaKind::Video {
-                cmd.args(["-ss", "0.5"]);
+    if !out.exists() {
+        std::fs::create_dir_all(out.parent().unwrap()).map_err(|e| e.to_string())?;
+        let tools = mgr.tools().await;
+        let kind = kind_from_ext(&p);
+        let mut ok = false;
+        match kind {
+            MediaKind::Video | MediaKind::Gif | MediaKind::Image => {
+                if let Ok(ff) = tools.ffmpeg() {
+                    let mut cmd = tokio::process::Command::new(ff);
+                    cmd.args(["-hide_banner", "-y", "-nostdin", "-loglevel", "error"]);
+                    if kind == MediaKind::Video {
+                        // Seek a little in so we don't get a black first frame.
+                        cmd.args(["-ss", "1"]);
+                    }
+                    cmd.arg("-i").arg(&p).args(["-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "5"]).arg(&out);
+                    ok = cmd.output().await.map(|o| o.status.success() && out.exists()).unwrap_or(false);
+                    if !ok && kind == MediaKind::Video {
+                        // Very short clip: retry from the start.
+                        let mut cmd = tokio::process::Command::new(ff);
+                        cmd.args(["-hide_banner", "-y", "-nostdin", "-loglevel", "error", "-i"]).arg(&p).args(["-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "5"]).arg(&out);
+                        ok = cmd.output().await.map(|o| o.status.success() && out.exists()).unwrap_or(false);
+                    }
+                }
+                #[cfg(target_os = "macos")]
+                if !ok && kind == MediaKind::Image {
+                    // HEIC & friends: macOS sips handles everything the OS can open.
+                    ok = tokio::process::Command::new("sips")
+                        .args(["-s", "format", "jpeg", "-s", "formatOptions", "70", "-Z", "480"])
+                        .arg(&p).arg("--out").arg(&out)
+                        .output().await.map(|o| o.status.success() && out.exists()).unwrap_or(false);
+                }
             }
-            cmd.arg("-i").arg(&p).args(["-frames:v", "1", "-vf", "scale='min(480,iw)':-2", "-q:v", "4"]).arg(&out);
-            cmd.output().await.map(|o| o.status.success()).unwrap_or(false)
+            MediaKind::Pdf => {
+                if let Ok(gs) = tools.gs() {
+                    ok = tokio::process::Command::new(gs)
+                        .args(["-q", "-dNOPAUSE", "-dBATCH", "-dSAFER", "-sDEVICE=jpeg", "-dFirstPage=1", "-dLastPage=1", "-r40", "-dJPEGQ=80"])
+                        .arg(format!("-sOutputFile={}", out.to_string_lossy()))
+                        .arg(&p).output().await.map(|o| o.status.success()).unwrap_or(false);
+                }
+                #[cfg(target_os = "macos")]
+                if !ok {
+                    // Quick Look thumbnail via sips isn't available for PDF; fall back to no preview.
+                }
+            }
+            MediaKind::Unknown => {}
         }
-        MediaKind::Pdf => {
-            let gs = tools.gs()?;
-            tokio::process::Command::new(gs)
-                .args(["-q", "-dNOPAUSE", "-dBATCH", "-dSAFER", "-sDEVICE=jpeg", "-dFirstPage=1", "-dLastPage=1", "-r40", "-dJPEGQ=80"])
-                .arg(format!("-sOutputFile={}", out.to_string_lossy()))
-                .arg(&p)
-                .output()
-                .await
-                .map(|o| o.status.success())
-                .unwrap_or(false)
+        if !ok || !out.exists() {
+            return Ok(None);
         }
-        MediaKind::Unknown => false,
-    };
-    if ok && out.exists() {
-        Ok(Some(out.to_string_lossy().to_string()))
-    } else {
-        Ok(None)
     }
+    let bytes = std::fs::read(&out).map_err(|e| e.to_string())?;
+    Ok(Some(format!("data:image/jpeg;base64,{}", b64(&bytes))))
+}
+
+fn b64(data: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        out.push(T[(n >> 18) as usize & 63] as char);
+        out.push(T[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 { T[(n >> 6) as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 2 { T[n as usize & 63] as char } else { '=' });
+    }
+    out
 }
 
 // Tiny FNV-1a; good enough for cache keys.
@@ -262,8 +294,15 @@ pub fn run() {
             let settings = load_settings(&settings_path);
             let tools = tools_with_overrides(&settings);
             let mgr = JobManager::new(app.handle().clone(), tools, settings.concurrency, config_dir.join("history.json"));
+            let settings = std::sync::Arc::new(Mutex::new(settings));
+            let watcher = std::sync::Arc::new(engine::watch::Watcher::new());
+            {
+                let (w, s, m) = (watcher.clone(), settings.clone(), mgr.clone());
+                tauri::async_runtime::spawn(async move { w.apply(s, m).await });
+            }
             app.manage(mgr);
-            app.manage(AppState { settings: Mutex::new(settings), settings_path, cache_dir });
+            app.manage(watcher);
+            app.manage(AppState { settings, settings_path, cache_dir });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

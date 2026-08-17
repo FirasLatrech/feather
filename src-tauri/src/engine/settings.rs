@@ -209,9 +209,29 @@ impl Default for OutputSettings {
     }
 }
 
+/// Auto-compress: watch folders and compress anything new that lands there.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct WatchSettings {
+    pub enabled: bool,
+    pub folders: Vec<String>,
+    /// Seconds a new file must be unchanged before we touch it (downloads finish writing).
+    pub settle_secs: u32,
+    pub videos: bool,
+    pub images: bool,
+    pub gifs: bool,
+    pub pdfs: bool,
+}
+impl Default for WatchSettings {
+    fn default() -> Self {
+        Self { enabled: false, folders: Vec::new(), settle_secs: 5, videos: true, images: true, gifs: true, pdfs: false }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    pub watch: WatchSettings,
     /// Bumped when defaults change in a way existing settings files should adopt.
     pub version: u32,
     pub video: VideoSettings,
@@ -228,6 +248,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             version: SETTINGS_VERSION,
+            watch: Default::default(),
             video: Default::default(),
             image: Default::default(),
             gif: Default::default(),

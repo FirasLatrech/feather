@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { RiCheckboxCircleFill, RiCloseCircleFill, RiRefreshLine, RiSunLine, RiMoonLine, RiComputerLine } from "@remixicon/react";
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiRefreshLine, RiSunLine, RiMoonLine, RiComputerLine, RiFolderAddLine, RiCloseLine, RiDownloadLine } from "@remixicon/react";
+import { open } from "@tauri-apps/plugin-dialog";
+import { api } from "../lib/api";
+import { isTauri } from "../lib/tauri";
 import { useStore } from "../store";
 import { Field, NumberInput, Toggle } from "../components/Controls";
 import { OutputSection } from "../components/SettingsPanel";
@@ -11,6 +14,17 @@ export function SettingsView() {
   const setTheme = (t: Theme) => { applyTheme(t); setThemeState(t); };
   if (!settings) return null;
   const isMac = navigator.userAgent.includes("Mac");
+  const setWatch = (p: Partial<typeof settings.watch>) => updateSettings((s) => ({ ...s, watch: { ...s.watch, ...p } }));
+  const addFolders = (fs: string[]) => setWatch({ folders: Array.from(new Set([...settings.watch.folders, ...fs])) });
+  const addFolder = async () => {
+    if (!isTauri) return addFolders(["/Users/demo/Desktop"]);
+    const d = await open({ directory: true, multiple: true });
+    if (Array.isArray(d)) addFolders(d); else if (typeof d === "string") addFolders([d]);
+  };
+  const addDownloads = async () => {
+    const dirs = await api.appDirs();
+    if (dirs.downloads) addFolders([dirs.downloads]); else if (!isTauri) addFolders(["/Users/demo/Downloads"]);
+  };
 
   const ToolRow = ({ name, path, hint }: { name: string; path: string | null; hint: string }) => (
     <div className="tool-status">
@@ -39,6 +53,43 @@ export function SettingsView() {
               ))}
             </div>
           </Field>
+        </div>
+
+        <div className="section-title">Auto-compress</div>
+        <div className="panel">
+          <Field label="Watch folders" row hint="New videos & images dropped in these folders are compressed automatically">
+            <Toggle value={settings.watch.enabled} onChange={(enabled) => setWatch({ enabled })} label="Auto-compress" />
+          </Field>
+          {settings.watch.enabled && (
+            <>
+              <div className="folder-list">
+                {settings.watch.folders.length === 0 && <div className="hint">No folders yet — add your Downloads folder to start.</div>}
+                {settings.watch.folders.map((f) => (
+                  <div className="folder-row" key={f}>
+                    <span className="path" title={f}>{shortPath(f)}</span>
+                    <button className="icon-btn sm" aria-label="Remove folder" onClick={() => setWatch({ folders: settings.watch.folders.filter((x) => x !== f) })}><RiCloseLine size={14} /></button>
+                  </div>
+                ))}
+                <div className="inline">
+                  <button className="btn sm" onClick={addDownloads}><RiDownloadLine size={13} /> Add Downloads</button>
+                  <button className="btn sm ghost" onClick={addFolder}><RiFolderAddLine size={13} /> Choose folder…</button>
+                </div>
+              </div>
+              <Field label="File types">
+                <div className="chips">
+                  {([["videos", "Videos"], ["images", "Images"], ["gifs", "GIFs"], ["pdfs", "PDFs"]] as const).map(([k, l]) => (
+                    <button key={k} className={`chip-toggle${settings.watch[k] ? " on" : ""}`} aria-pressed={settings.watch[k]} onClick={() => setWatch({ [k]: !settings.watch[k] })}>{l}</button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Replace the original file" row hint="Compressed version takes the place of the download (same name)">
+                <Toggle value={settings.output.overwrite_original} onChange={(overwrite_original) => updateSettings((s) => ({ ...s, output: { ...s.output, overwrite_original, trash_original: overwrite_original ? false : s.output.trash_original } }))} label="Replace the original file" />
+              </Field>
+              <Field label="Wait before compressing" row hint="Lets downloads finish writing">
+                <NumberInput value={settings.watch.settle_secs} min={1} max={120} onChange={(v) => setWatch({ settle_secs: Math.max(1, v ?? 5) })} suffix="s" />
+              </Field>
+            </>
+          )}
         </div>
 
         <div className="section-title">Engine</div>
@@ -87,4 +138,8 @@ export function SettingsView() {
       </div>
     </div>
   );
+}
+
+function shortPath(p: string) {
+  return p.replace(/^\/Users\/[^/]+/, "~").replace(/^C:\\Users\\[^\\]+/, "~");
 }

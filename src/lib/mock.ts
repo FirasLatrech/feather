@@ -11,6 +11,7 @@ function emit(event: string, payload: unknown) { for (const h of listeners[event
 
 const defaults: Settings = {
   version: 2,
+  watch: { enabled: false, folders: [], settle_secs: 5, videos: true, images: true, gifs: true, pdfs: false },
   video: { quality: "good", codec: "auto", format: "same", hw_accel: true, resize: { mode: "none", value: 0 }, fps: null, remove_audio: false, target_size_mb: null, trim_start: null, trim_end: null, threads: 0 },
   image: { quality: "good", format: "same", resize: { mode: "none", value: 0 }, keep_metadata: false },
   gif: { quality: "good", fps: 15, resize: { mode: "width", value: 640 }, loop_forever: true },
@@ -19,6 +20,7 @@ const defaults: Settings = {
   concurrency: 2, notify_on_finish: true, ffmpeg_path: null, gs_path: null,
 };
 let settings: Settings = structuredClone(defaults);
+if (new URLSearchParams(location.search).get("watch")) settings.watch = { ...settings.watch, enabled: true, folders: ["/Users/demo/Downloads", "/Users/demo/Desktop/Screenshots"] };
 const jobs: Record<string, Job> = {};
 const history: HistoryItem[] = [];
 
@@ -105,6 +107,6 @@ export const mockApi = {
   getHistory: async () => history,
   clearHistory: async () => { history.length = 0; },
   thumbnail: async (path: string) => THUMBS[path] ?? null,
-  appDirs: async () => ({}),
+  appDirs: async () => ({ downloads: "/Users/demo/Downloads" }),
 };
 export const mockConvertFileSrc = (p: string) => p;

@@ -65,8 +65,18 @@ export interface OutputSettings {
   keep_dates: boolean;
   skip_if_larger: boolean;
 }
+export interface WatchSettings {
+  enabled: boolean;
+  folders: string[];
+  settle_secs: number;
+  videos: boolean;
+  images: boolean;
+  gifs: boolean;
+  pdfs: boolean;
+}
 export interface Settings {
   version: number;
+  watch: WatchSettings;
   video: VideoSettings;
   image: ImageSettings;
   gif: GifSettings;

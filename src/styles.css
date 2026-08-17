@@ -303,3 +303,11 @@ dialog.dlg .actions { display: flex; justify-content: flex-end; gap: 8px; }
 .advanced-toggle:hover { color: var(--fg); background: var(--bg-hover); }
 .advanced-toggle .chev { transition: transform .15s var(--ease); }
 .advanced-body { display: flex; flex-direction: column; gap: 12px; padding: 10px 0 2px; }
+
+/* Auto-compress */
+.folder-list { display: flex; flex-direction: column; gap: 6px; }
+.folder-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg-elev); }
+.folder-row .path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-toggle { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 12px; font-weight: 500; color: var(--fg-2); background: var(--bg-elev); }
+.chip-toggle.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }

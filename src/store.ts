@@ -84,7 +84,16 @@ export const useStore = create<State>((set, get) => ({
     await listen<Job>("job:update", (e) => {
       const j = e.payload;
       const prev = get().jobs[j.id];
-      set((s) => ({ jobs: { ...s.jobs, [j.id]: j }, jobByPath: { ...s.jobByPath, [j.input.path]: j.id } }));
+      set((s) => {
+        const known = s.files.some((f) => f.path === j.input.path);
+        return {
+          jobs: { ...s.jobs, [j.id]: j },
+          jobByPath: { ...s.jobByPath, [j.input.path]: j.id },
+          // Jobs started by the folder watcher: surface them in the list.
+          files: known ? s.files : [...s.files, j.input],
+        };
+      });
+      if (!get().thumbs[j.input.path]) void get().loadThumb(j.input.path);
       if (prev?.status !== j.status && (j.status === "done" || j.status === "failed")) {
         // Notify when the whole batch settles (not per file), if enabled and app is not focused.
         const all = Object.values(get().jobs);
@@ -200,7 +209,7 @@ export const useStore = create<State>((set, get) => ({
     if (get().thumbs[path]) return;
     try {
       const p = await api.thumbnail(path);
-      if (p) set((s) => ({ thumbs: { ...s.thumbs, [path]: convertFileSrc(p) } }));
+      if (p) set((s) => ({ thumbs: { ...s.thumbs, [path]: p.startsWith("data:") || !isTauri ? p : convertFileSrc(p) } }));
     } catch {
       /* ignore */
     }

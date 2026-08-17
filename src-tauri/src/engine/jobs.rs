@@ -58,6 +58,8 @@ struct Entry {
 struct Inner {
     app: AppHandle,
     jobs: Mutex<Vec<Entry>>,
+    /// Output paths we wrote recently — the folder watcher must never re-compress these.
+    produced: Mutex<Vec<(PathBuf, Instant)>>,
     sem: RwLock<Arc<Semaphore>>,
     pub tools: RwLock<Tools>,
     history_path: PathBuf,
@@ -84,10 +86,20 @@ impl JobManager {
         Self(Arc::new(Inner {
             app,
             jobs: Mutex::new(Vec::new()),
+            produced: Mutex::new(Vec::new()),
             sem: RwLock::new(Arc::new(Semaphore::new(concurrency.max(1)))),
             tools: RwLock::new(tools),
             history_path,
         }))
+    }
+
+    pub async fn mark_produced(&self, p: &Path) {
+        let mut v = self.0.produced.lock().await;
+        v.retain(|(_, t)| t.elapsed() < std::time::Duration::from_secs(3600));
+        v.push((p.to_path_buf(), Instant::now()));
+    }
+    pub async fn was_produced(&self, p: &Path) -> bool {
+        self.0.produced.lock().await.iter().any(|(q, _)| q == p)
     }
 
     pub async fn set_tools(&self, t: Tools) {
@@ -367,7 +379,11 @@ impl JobManager {
         let dims = run_res.unwrap();
 
         // Finalize (pure fs logic; unit-tested in output.rs)
+        // Register the destination *before* the file appears so a folder watcher can't race us.
+        self.mark_produced(&final_path).await;
+        self.mark_produced(&input_path).await;
         let (final_real, size) = output::finalize(&input_path, &tmp, &final_path, ext, &s.output, info.size)?;
+        self.mark_produced(&final_real).await;
         if final_real != final_path {
             let fr = final_real.to_string_lossy().to_string();
             self.update(id, |j| j.output_path = Some(fr)).await;

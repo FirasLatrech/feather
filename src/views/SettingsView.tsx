@@ -11,6 +11,7 @@ import { applyTheme, getTheme, type Theme } from "../lib/theme";
 export function SettingsView() {
   const { settings, updateSettings, tools, refreshTools } = useStore();
   const [theme, setThemeState] = useState<Theme>(getTheme());
+  const [qa, setQa] = useState<string>("");
   const setTheme = (t: Theme) => { applyTheme(t); setThemeState(t); };
   if (!settings) return null;
   const isMac = navigator.userAgent.includes("Mac");
@@ -91,6 +92,21 @@ export function SettingsView() {
             </>
           )}
         </div>
+
+        {isMac && (
+          <>
+            <div className="section-title">Finder</div>
+            <div className="panel">
+              <Field label="Right-click → Compress with Feather" row hint="Adds a Quick Action to Finder's context menu">
+                <button className="btn sm" onClick={async () => { try { await api.installQuickAction(); setQa("installed"); } catch (e) { setQa(String(e)); } }}>
+                  {qa === "installed" ? "Installed ✓" : "Install"}
+                </button>
+              </Field>
+              {qa && qa !== "installed" && <div className="notice err">{qa}</div>}
+              <div className="hint">You can also right-click any file → Open With → Feather.</div>
+            </div>
+          </>
+        )}
 
         <div className="section-title">Engine</div>
         <div className="panel">

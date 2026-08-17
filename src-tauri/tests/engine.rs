@@ -256,3 +256,14 @@ mod finalize {
         assert_eq!(m.unix_seconds(), 1_600_000_000);
     }
 }
+
+#[cfg(target_os = "macos")]
+#[test]
+fn quick_action_workflow_is_valid_plist() {
+    let dir = feather_lib::install_quick_action_for_test().unwrap();
+    for f in ["Info.plist", "document.wflow"] {
+        let p = std::path::Path::new(&dir).join("Contents").join(f);
+        let out = std::process::Command::new("plutil").arg("-lint").arg(&p).output().unwrap();
+        assert!(out.status.success(), "{f}: {}", String::from_utf8_lossy(&out.stdout));
+    }
+}

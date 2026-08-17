@@ -21,6 +21,8 @@ const real = {
   clearHistory: () => invoke<void>("clear_history"),
   thumbnail: (path: string) => invoke<string | null>("thumbnail", { path }),
   appDirs: () => invoke<Record<string, string>>("app_dirs"),
+  takeOpenedFiles: () => invoke<string[]>("take_opened_files"),
+  installQuickAction: () => invoke<string>("install_quick_action"),
 };
 
 export const api: typeof real = isTauri ? real : (mockApi as unknown as typeof real);

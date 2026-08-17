@@ -101,6 +101,12 @@ export const useStore = create<State>((set, get) => ({
         if (!stillActive) void notify(all);
       }
     });
+    // Files handed to us by Finder (Open With / Quick Action / CLI).
+    await listen<string[]>("files:opened", (e) => { void get().addPaths(e.payload); });
+    if (isTauri) {
+      const opened = await api.takeOpenedFiles();
+      if (opened.length) void get().addPaths(opened);
+    }
     await listen("jobs:changed", async () => {
       const list = await api.listJobs();
       const jobMap: Record<string, Job> = {};

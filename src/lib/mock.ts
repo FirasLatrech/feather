@@ -108,5 +108,7 @@ export const mockApi = {
   clearHistory: async () => { history.length = 0; },
   thumbnail: async (path: string) => THUMBS[path] ?? null,
   appDirs: async () => ({ downloads: "/Users/demo/Downloads" }),
+  takeOpenedFiles: async () => [],
+  installQuickAction: async () => "/Users/demo/Library/Services/Compress with Feather.workflow",
 };
 export const mockConvertFileSrc = (p: string) => p;

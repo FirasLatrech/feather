@@ -24,7 +24,12 @@
     ],
     "security": {
       "csp": null,
-      "assetProtocol": { "enable": true, "scope": ["**"] }
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "**"
+        ]
+      }
     }
   },
   "bundle": {
@@ -36,6 +41,66 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "mp4",
+          "mov",
+          "m4v",
+          "mkv",
+          "webm",
+          "avi",
+          "flv",
+          "ts",
+          "mts",
+          "m2ts",
+          "wmv",
+          "mpg",
+          "mpeg"
+        ],
+        "name": "Video",
+        "description": "Video file",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "jpg",
+          "jpeg",
+          "png",
+          "webp",
+          "avif",
+          "heic",
+          "heif",
+          "tif",
+          "tiff",
+          "bmp"
+        ],
+        "name": "Image",
+        "description": "Image file",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "gif"
+        ],
+        "name": "GIF",
+        "description": "GIF image",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "pdf"
+        ],
+        "name": "PDF",
+        "description": "PDF document",
+        "role": "Viewer"
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "13.0"
+    },
+    "category": "public.app-category.utilities",
+    "shortDescription": "Make videos, images, GIFs and PDFs lighter \u2014 on your device."
   }
 }

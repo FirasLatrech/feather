@@ -21,7 +21,8 @@ TMP=$(mktemp -d)
 echo "→ Downloading $(basename "$URL")…"
 curl -fL --progress-bar "$URL" -o "$TMP/Feather.dmg"
 echo "→ Installing to /Applications…"
-MNT=$(hdiutil attach "$TMP/Feather.dmg" -nobrowse -quiet | grep -o "/Volumes/.*" | head -1)
+MNT="$TMP/mnt"; mkdir -p "$MNT"
+hdiutil attach "$TMP/Feather.dmg" -nobrowse -quiet -mountpoint "$MNT"
 rm -rf /Applications/Feather.app
 cp -R "$MNT/Feather.app" /Applications/
 hdiutil detach "$MNT" -quiet || true

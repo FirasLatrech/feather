@@ -49,7 +49,7 @@ jobs:
           releaseName: "Feather ${{ github.ref_name }}"
           releaseBody: |
             Download the `.dmg` for your Mac (Apple Silicon = aarch64, Intel = x64), drag Feather to Applications.
-            First launch: right-click → Open (the app is not yet notarized).
+            First launch: macOS says "Feather is damaged" (not notarized yet — it is not damaged). Run once: `xattr -cr /Applications/Feather.app`
             Requires FFmpeg (`brew install ffmpeg`); Ghostscript for PDFs (`brew install ghostscript`).
           releaseDraft: false
           prerelease: false

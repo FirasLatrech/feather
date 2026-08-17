@@ -27,7 +27,8 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
   const showImage = kinds.includes("image");
   const showGif = kinds.includes("gif") || (showVideo && v.format === "gif");
   const showPdf = kinds.includes("pdf");
-  const single = kinds.length === 1;
+  const order: [boolean, string][] = [[showVideo, "video"], [showImage, "image"], [showGif, "gif"], [showPdf, "pdf"]];
+  const first = order.find(([v]) => v)?.[1];
 
   return (
     <aside className="sidebar">
@@ -41,7 +42,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
       </div>
       <div className="sidebar-body">
         {showVideo && (
-          <Group icon={<RiFilmLine size={14} />} title="Video" summary={`${qLabel[v.quality]} · ${v.codec.toUpperCase()}`} defaultOpen>
+          <Group icon={<RiFilmLine size={14} />} title="Video" summary={`${qLabel[v.quality]} · ${v.codec.toUpperCase()}`} defaultOpen={first === "video"}>
             <Field label="Quality" hint={v.target_size_mb ? "Ignored while a target size is set" : undefined}>
               <QualityPicker value={v.quality} onChange={(quality) => setVideo({ quality })} />
             </Field>
@@ -83,7 +84,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
         )}
 
         {showImage && (
-          <Group icon={<RiImageLine size={14} />} title="Image" summary={`${qLabel[settings.image.quality]} · ${settings.image.format.toUpperCase()}`} defaultOpen>
+          <Group icon={<RiImageLine size={14} />} title="Image" summary={`${qLabel[settings.image.quality]} · ${settings.image.format.toUpperCase()}`} defaultOpen={first === "image"}>
             <Field label="Quality">
               <QualityPicker value={settings.image.quality} onChange={(quality) => setImage({ quality })} />
             </Field>
@@ -98,7 +99,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
         )}
 
         {showGif && (
-          <Group icon={<RiFileGifLine size={14} />} title="GIF" summary={`${qLabel[settings.gif.quality]} · ${settings.gif.fps} fps`} defaultOpen={!showVideo || v.format === "gif"}>
+          <Group icon={<RiFileGifLine size={14} />} title="GIF" summary={`${qLabel[settings.gif.quality]} · ${settings.gif.fps} fps`} defaultOpen={first === "gif" || (showVideo && v.format === "gif")}>
             <Field label="Quality" hint="Palette size & dithering">
               <QualityPicker value={settings.gif.quality} onChange={(quality) => setGif({ quality })} />
             </Field>
@@ -113,7 +114,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
         )}
 
         {showPdf && (
-          <Group icon={<RiFilePdf2Line size={14} />} title="PDF" summary={qLabel[settings.pdf.quality]} defaultOpen>
+          <Group icon={<RiFilePdf2Line size={14} />} title="PDF" summary={qLabel[settings.pdf.quality]} defaultOpen={first === "pdf"}>
             <Field label="Quality" hint="Highest keeps print quality · Acceptable targets screens (72 dpi)">
               <QualityPicker value={settings.pdf.quality} onChange={(quality) => setPdf({ quality })} />
             </Field>
@@ -121,7 +122,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
           </Group>
         )}
 
-        <Group icon={<RiFolderDownloadLine size={14} />} title="Output" summary={outSummary(settings.output)} defaultOpen={!single && !showVideo && !showImage && !showPdf && !showGif}>
+        <Group icon={<RiFolderDownloadLine size={14} />} title="Output" summary={outSummary(settings.output)} defaultOpen={!first}>
           <OutputSection out={settings.output} setOut={setOut} />
         </Group>
       </div>

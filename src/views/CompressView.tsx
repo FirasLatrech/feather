@@ -6,17 +6,20 @@ import { FileCard } from "../components/FileCard";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { fmtBytes } from "../lib/format";
 import type { MediaKind } from "../lib/types";
+import { isTauri } from "../lib/tauri";
 
 const FILTERS = [
   { name: "Media", extensions: ["mp4", "mov", "m4v", "mkv", "webm", "avi", "flv", "ts", "mts", "wmv", "mpg", "mpeg", "jpg", "jpeg", "png", "webp", "avif", "heic", "heif", "tif", "tiff", "bmp", "gif", "pdf"] },
 ];
 
 export async function pickFiles(addPaths: (p: string[]) => Promise<void>) {
+  if (!isTauri) return addPaths([]);
   const res = await open({ multiple: true, filters: FILTERS });
   if (Array.isArray(res)) await addPaths(res);
   else if (typeof res === "string") await addPaths([res]);
 }
 export async function pickFolder(addPaths: (p: string[]) => Promise<void>) {
+  if (!isTauri) return addPaths([]);
   const res = await open({ directory: true, multiple: true });
   if (Array.isArray(res)) await addPaths(res);
   else if (typeof res === "string") await addPaths([res]);
@@ -94,11 +97,14 @@ export function CompressView() {
               {stats.done > 0 && <span><b>{stats.done}</b>/{files.length} done</span>}
               {stats.failed > 0 && <span style={{ color: "var(--err)" }}>{stats.failed} failed</span>}
               {active && <span>{stats.running} running{stats.queued > 0 && `, ${stats.queued} queued`}</span>}
+              {!active && stats.done === 0 && stats.failed === 0 && <span>Ready · {stats.pending} file{stats.pending === 1 ? "" : "s"} · {fmtBytes(stats.inTotal)}</span>}
             </div>
             <div className="spacer" />
             {active && <div className="summary-progress progress"><i style={{ width: `${stats.avgProgress}%` }} /></div>}
             {active ? (
               <button className="btn lg danger" onClick={cancelAll}><RiForbidLine size={16} /> Cancel all</button>
+            ) : stats.pending === 0 ? (
+              <button className="btn lg" onClick={() => pickFiles(addPaths)}><RiAddLine size={16} /> Add more</button>
             ) : (
               <button className="btn primary lg" disabled={!canCompress} onClick={() => compress()} title="⌘↩">
                 <RiFlashlightLine size={16} /> Compress{stats.pending > 0 && files.length !== stats.pending ? ` ${stats.pending}` : ""}
@@ -108,7 +114,7 @@ export function CompressView() {
         )}
       </div>
 
-      {selFile ? (
+      {files.length === 0 ? null : selFile ? (
         <SettingsPanel
           key={selFile.path}
           settings={overrides[selFile.path] ?? settings}
@@ -125,7 +131,7 @@ export function CompressView() {
           onChange={updateSettings}
           kinds={kinds.length ? kinds : ["video", "image", "gif", "pdf"]}
           title="Settings"
-          subtitle={files.length ? "Applies to all files · click a file to customize it" : "Defaults for new files"}
+          subtitle="Applies to all files · click a file to customize it"
         />
       )}
     </div>

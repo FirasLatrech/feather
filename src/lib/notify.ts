@@ -3,13 +3,14 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Job } from "./types";
 import { fmtBytes } from "./format";
 import { useStore } from "../store";
+import { isTauri } from "./tauri";
 
 let asked = false;
 
 /** Fire one summary notification for a finished batch. Skips when the window is focused. */
 export async function notify(jobs: Job[]) {
   const settings = useStore.getState().settings;
-  if (!settings?.notify_on_finish) return;
+  if (!isTauri || !settings?.notify_on_finish) return;
   try {
     if (await getCurrentWindow().isFocused()) return;
   } catch { /* ignore */ }

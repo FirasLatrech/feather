@@ -34,8 +34,7 @@ export function FileCard({ file }: { file: MediaInfo }) {
         <div className="meta">
           <span>{fmtBytes(file.size)}</span>
           {dims && <span>{dims}</span>}
-          {file.video_codec && <span>{file.video_codec.toUpperCase()}</span>}
-          {file.fps && file.kind === "video" && <span>{Math.round(file.fps)} fps</span>}
+          {file.video_codec && file.kind === "video" && <span>{file.video_codec.toUpperCase()}</span>}
         </div>
 
         {running && (
@@ -56,8 +55,9 @@ export function FileCard({ file }: { file: MediaInfo }) {
             </div>
             <div className="result">
               <span className="meta">
-                {job.output_width && job.output_height && <span>{job.output_width}×{job.output_height}</span>}
+                {job.output_width && job.output_height && (job.output_width !== file.width || job.output_height !== file.height) && <span>{job.output_width}×{job.output_height}</span>}
                 <span>{fmtElapsed(job.elapsed_ms)}</span>
+                {job.output_path && <span title={job.output_path}>{job.output_path.split(/[\/]/).slice(-2, -1)[0]}/</span>}
               </span>
               <span className="row-actions">
                 {job.output_path && (

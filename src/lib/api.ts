@@ -1,7 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { HistoryItem, Job, MediaInfo, Settings, Tools } from "./types";
 
-export const api = {
+import { isTauri } from "./tauri";
+import { mockApi } from "./mock";
+
+const real = {
   getTools: () => invoke<Tools>("get_tools"),
   probePaths: (paths: string[]) => invoke<MediaInfo[]>("probe_paths", { paths }),
   getSettings: () => invoke<Settings>("get_settings"),
@@ -18,3 +21,5 @@ export const api = {
   thumbnail: (path: string) => invoke<string | null>("thumbnail", { path }),
   appDirs: () => invoke<Record<string, string>>("app_dirs"),
 };
+
+export const api: typeof real = isTauri ? real : (mockApi as unknown as typeof real);

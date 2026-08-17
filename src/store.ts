@@ -1,6 +1,10 @@
 import { create } from "zustand";
-import { listen } from "@tauri-apps/api/event";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { listen as tauriListen } from "@tauri-apps/api/event";
+import { convertFileSrc as tauriConvert } from "@tauri-apps/api/core";
+import { isTauri } from "./lib/tauri";
+import { mockListen, mockConvertFileSrc } from "./lib/mock";
+const listen: typeof tauriListen = isTauri ? tauriListen : (mockListen as unknown as typeof tauriListen);
+const convertFileSrc = isTauri ? tauriConvert : mockConvertFileSrc;
 import { api } from "./lib/api";
 import { notify } from "./lib/notify";
 import type { Job, MediaInfo, Settings, Tools } from "./lib/types";
@@ -61,6 +65,18 @@ export const useStore = create<State>((set, get) => ({
       jobByPath[j.input.path] = j.id;
     }
     set({ settings, tools, jobs: jobMap, jobByPath, ready: true });
+    if (!isTauri) {
+      // Browser preview: ?demo=files | running | done | history | settings, &select=1
+      const q = new URLSearchParams(location.search);
+      const demo = q.get("demo");
+      if (demo === "history") set({ view: "history" });
+      if (demo === "settings") set({ view: "settings" });
+      if (demo === "files" || demo === "running" || demo === "done") {
+        await get().addPaths([]);
+        if (q.get("select")) set({ selected: get().files[0]?.path ?? null });
+        if (demo === "running" || demo === "done") await get().compress();
+      }
+    }
     await listen<Job>("job:update", (e) => {
       const j = e.payload;
       const prev = get().jobs[j.id];
@@ -87,7 +103,7 @@ export const useStore = create<State>((set, get) => ({
   setView: (view) => set({ view }),
 
   addPaths: async (paths) => {
-    if (!paths.length) return;
+    if (!paths.length && isTauri) return;
     set({ adding: true });
     try {
       const infos = await api.probePaths(paths);

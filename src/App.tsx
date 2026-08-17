@@ -5,6 +5,7 @@ import { useStore } from "./store";
 import { CompressView, pickFiles } from "./views/CompressView";
 import { HistoryView } from "./views/HistoryView";
 import { SettingsView } from "./views/SettingsView";
+import { isTauri } from "./lib/tauri";
 import "./styles.css";
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    if (!isTauri) return;
     void getCurrentWebview().onDragDropEvent((e) => {
       const t = e.payload.type;
       if (t === "enter" || t === "over") setDragging(true);

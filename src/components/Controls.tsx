@@ -47,14 +47,15 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: (v: bool
 }
 
 export function QualityPicker({ value, onChange }: { value: Quality; onChange: (q: Quality) => void }) {
+  const cur = QUALITIES.find((q) => q.value === value) ?? QUALITIES[2];
   return (
     <div className="quality">
-      {QUALITIES.map((q) => (
-        <button key={q.value} className={q.value === value ? "active" : ""} onClick={() => onChange(q.value)} title={q.hint}>
-          <b>{q.label}</b>
-          <span>{q.hint}</span>
-        </button>
-      ))}
+      <div className="steps">
+        {QUALITIES.map((q) => (
+          <button key={q.value} className={q.value === value ? "active" : ""} onClick={() => onChange(q.value)} title={q.hint}>{q.label}</button>
+        ))}
+      </div>
+      <div className="desc"><span><b>{cur.label}</b> · {cur.hint}</span><span>{value === "highest" ? "larger file" : value === "acceptable" ? "smallest file" : ""}</span></div>
     </div>
   );
 }

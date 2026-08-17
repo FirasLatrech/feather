@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { api } from "./lib/api";
+import { notify } from "./lib/notify";
 import type { Job, MediaInfo, Settings, Tools } from "./lib/types";
 
 export type View = "compress" | "history" | "settings";
@@ -62,7 +63,14 @@ export const useStore = create<State>((set, get) => ({
     set({ settings, tools, jobs: jobMap, jobByPath, ready: true });
     await listen<Job>("job:update", (e) => {
       const j = e.payload;
+      const prev = get().jobs[j.id];
       set((s) => ({ jobs: { ...s.jobs, [j.id]: j }, jobByPath: { ...s.jobByPath, [j.input.path]: j.id } }));
+      if (prev?.status !== j.status && (j.status === "done" || j.status === "failed")) {
+        // Notify when the whole batch settles (not per file), if enabled and app is not focused.
+        const all = Object.values(get().jobs);
+        const stillActive = all.some((x) => x.status === "running" || x.status === "queued");
+        if (!stillActive) void notify(all);
+      }
     });
     await listen("jobs:changed", async () => {
       const list = await api.listJobs();

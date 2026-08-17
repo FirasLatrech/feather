@@ -154,3 +154,105 @@ async fn pdf_gs() {
     assert!(ok, "gs failed: {err}\n{args:?}");
     assert!(out.exists());
 }
+
+// ───────── finalize() — the only code path that touches user files ─────────
+mod finalize {
+    use feather_lib::engine::output::{finalize, temp_path_for};
+    use feather_lib::engine::settings::OutputSettings;
+    use std::path::PathBuf;
+
+    fn scratch(name: &str) -> PathBuf {
+        let d = std::env::temp_dir().join("feather-finalize-tests").join(name);
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        d
+    }
+    fn write(p: &PathBuf, n: usize) { std::fs::write(p, vec![b'x'; n]).unwrap(); }
+
+    #[test]
+    fn default_keeps_original_and_writes_new_file() {
+        let d = scratch("default");
+        let input = d.join("a.mp4"); write(&input, 1000);
+        let out = d.join("a_compressed.mp4");
+        let tmp = temp_path_for(&out); write(&tmp, 400);
+        let s = OutputSettings::default();
+        let (p, size) = finalize(&input, &tmp, &out, "mp4", &s, 1000).unwrap();
+        assert_eq!(p, out); assert_eq!(size, 400);
+        assert!(input.exists(), "original must be untouched");
+        assert_eq!(std::fs::metadata(&input).unwrap().len(), 1000);
+        assert!(!tmp.exists());
+    }
+
+    #[test]
+    fn overwrite_same_ext_replaces_in_place() {
+        let d = scratch("overwrite");
+        let input = d.join("a.jpg"); write(&input, 1000);
+        let out = d.join("a.jpg"); // resolve_output returns the input path in overwrite mode
+        let tmp = temp_path_for(&out); write(&tmp, 300);
+        let s = OutputSettings { overwrite_original: true, ..Default::default() };
+        let (p, size) = finalize(&input, &tmp, &out, "jpg", &s, 1000).unwrap();
+        assert_eq!(p, input); assert_eq!(size, 300);
+        assert_eq!(std::fs::metadata(&input).unwrap().len(), 300, "input must now hold compressed bytes");
+        assert!(!tmp.exists());
+    }
+
+    #[test]
+    fn overwrite_diff_ext_writes_new_and_removes_original() {
+        let d = scratch("overwrite-ext");
+        let input = d.join("a.png"); write(&input, 1000);
+        let out = d.join("a.webp");
+        let tmp = temp_path_for(&out); write(&tmp, 300);
+        let s = OutputSettings { overwrite_original: true, ..Default::default() };
+        let (p, _) = finalize(&input, &tmp, &out, "webp", &s, 1000).unwrap();
+        assert_eq!(p, out);
+        assert!(out.exists());
+        assert!(!input.exists(), "original should be trashed");
+    }
+
+    #[test]
+    fn skip_if_larger_keeps_original_bytes() {
+        let d = scratch("larger");
+        let input = d.join("a.mp4"); write(&input, 1000);
+        let out = d.join("a_compressed.mp4");
+        let tmp = temp_path_for(&out); write(&tmp, 1200); // worse than input
+        let s = OutputSettings { skip_if_larger: true, ..Default::default() };
+        let (p, size) = finalize(&input, &tmp, &out, "mp4", &s, 1000).unwrap();
+        assert_eq!(p, out); assert_eq!(size, 1000, "output should be a copy of the original");
+        assert!(input.exists());
+        assert!(!tmp.exists());
+        // and with overwrite: original untouched, nothing else written
+        let d = scratch("larger-overwrite");
+        let input = d.join("b.mp4"); write(&input, 1000);
+        let tmp = temp_path_for(&input); write(&tmp, 1200);
+        let s = OutputSettings { skip_if_larger: true, overwrite_original: true, ..Default::default() };
+        let (p, size) = finalize(&input, &tmp, &input, "mp4", &s, 1000).unwrap();
+        assert_eq!(p, input); assert_eq!(size, 1000);
+        assert_eq!(std::fs::read_dir(&d).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn trash_original_removes_input() {
+        let d = scratch("trash");
+        let input = d.join("a.mp4"); write(&input, 1000);
+        let out = d.join("a_compressed.mp4");
+        let tmp = temp_path_for(&out); write(&tmp, 400);
+        let s = OutputSettings { trash_original: true, ..Default::default() };
+        finalize(&input, &tmp, &out, "mp4", &s, 1000).unwrap();
+        assert!(out.exists());
+        assert!(!input.exists());
+    }
+
+    #[test]
+    fn keep_dates_copies_mtime() {
+        let d = scratch("dates");
+        let input = d.join("a.mp4"); write(&input, 1000);
+        let old = filetime::FileTime::from_unix_time(1_600_000_000, 0);
+        filetime::set_file_mtime(&input, old).unwrap();
+        let out = d.join("a_compressed.mp4");
+        let tmp = temp_path_for(&out); write(&tmp, 400);
+        let s = OutputSettings { keep_dates: true, ..Default::default() };
+        finalize(&input, &tmp, &out, "mp4", &s, 1000).unwrap();
+        let m = filetime::FileTime::from_last_modification_time(&std::fs::metadata(&out).unwrap());
+        assert_eq!(m.unix_seconds(), 1_600_000_000);
+    }
+}

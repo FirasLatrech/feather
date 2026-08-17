@@ -2,33 +2,39 @@
    Brand colors live here only. Swap --accent / --accent-2 and the
    neutrals to rebrand; nothing else in the app hardcodes a color.  */
 :root {
-  --accent: #5b6cff;
-  --accent-2: #9b6bff;
+  /* Brand — Paper / Stone / Coral / Black */
+  --paper: #F6F4F1;
+  --stone: #E4DED2;
+  --coral: #F95C4B;
+  --black: #000000;
+
+  --accent: var(--coral);
+  --accent-2: #ff8a6b;
   --accent-fg: #ffffff;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-ring: color-mix(in srgb, var(--accent) 28%, transparent);
+  --accent-ring: color-mix(in srgb, var(--accent) 30%, transparent);
 
-  --bg: #f6f6f8;
+  --bg: var(--paper);
   --bg-elev: #ffffff;
-  --bg-sunken: #eeeef2;
-  --bg-hover: #f1f1f5;
-  --fg: #16161a;
-  --fg-2: #5f5f6b;
-  --fg-3: #93939e;
-  --line: rgba(20, 20, 30, 0.08);
-  --line-strong: rgba(20, 20, 30, 0.14);
+  --bg-sunken: #edeae4;
+  --bg-hover: #f1eee8;
+  --fg: #111111;
+  --fg-2: #5c5852;
+  --fg-3: #948f86;
+  --line: color-mix(in srgb, var(--stone) 70%, transparent);
+  --line-strong: #d6cfc1;
 
-  --ok: #17a35b;
+  --ok: #1f9d5a;
   --ok-soft: color-mix(in srgb, var(--ok) 13%, transparent);
-  --warn: #d98a06;
+  --warn: #d68a12;
   --warn-soft: color-mix(in srgb, var(--warn) 14%, transparent);
-  --err: #e0342f;
+  --err: #d9382b;
   --err-soft: color-mix(in srgb, var(--err) 12%, transparent);
 
   --r-lg: 16px; --r-md: 12px; --r-sm: 8px; --r-xs: 6px;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
-  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
-  --shadow-lg: 0 2px 4px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.12);
+  --shadow-sm: 0 1px 2px rgba(20,15,5,.06);
+  --shadow: 0 1px 2px rgba(20,15,5,.05), 0 8px 24px rgba(20,15,5,.07);
+  --shadow-lg: 0 2px 4px rgba(20,15,5,.06), 0 16px 48px rgba(20,15,5,.14);
   --titlebar-h: 52px;
   --sidebar-w: 336px;
   --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
@@ -38,23 +44,23 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --accent: #6f7dff;
-    --accent-2: #a77dff;
-    --bg: #131316;
-    --bg-elev: #1c1c21;
-    --bg-sunken: #0e0e11;
-    --bg-hover: #232329;
-    --fg: #f3f3f6;
-    --fg-2: #aeaeb8;
-    --fg-3: #74747f;
-    --line: rgba(255,255,255,.07);
-    --line-strong: rgba(255,255,255,.14);
-    --ok: #34c274;
-    --warn: #f0a51c;
-    --err: #ff5c57;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
-    --shadow-lg: 0 2px 4px rgba(0,0,0,.5), 0 16px 48px rgba(0,0,0,.5);
+    --accent: #ff6a58;
+    --accent-2: #ff9a80;
+    --bg: var(--black);
+    --bg-elev: #141311;
+    --bg-sunken: #0a0a09;
+    --bg-hover: #1f1d1a;
+    --fg: var(--paper);
+    --fg-2: #b5afa4;
+    --fg-3: #7a756c;
+    --line: rgba(246,244,241,.08);
+    --line-strong: rgba(246,244,241,.16);
+    --ok: #3ccc7c;
+    --warn: #f2a83a;
+    --err: #ff6b5e;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.5);
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.45);
+    --shadow-lg: 0 2px 4px rgba(0,0,0,.6), 0 16px 48px rgba(0,0,0,.6);
   }
 }
 
@@ -105,7 +111,7 @@ h1, h2, h3, p { margin: 0; }
 .btn:hover:not(:disabled) { background: var(--bg-hover); }
 .btn:active:not(:disabled) { transform: scale(.98); }
 .btn.primary { background: var(--accent); border-color: transparent; color: var(--accent-fg); box-shadow: 0 1px 2px var(--accent-ring); }
-.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, black); }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 90%, black); }
 .btn.ghost { border-color: transparent; background: transparent; color: var(--fg-2); }
 .btn.ghost:hover:not(:disabled) { background: var(--bg-hover); color: var(--fg); }
 .btn.soft { border-color: transparent; background: var(--bg-sunken); }

@@ -273,6 +273,9 @@ impl JobManager {
         };
         let final_path = output::resolve_output(info, &s.output, quality, codec_label, ext, resolution)?;
         let tmp = output::temp_path_for(&final_path);
+        if let Some(dir) = tmp.parent() {
+            output::sweep_temps(dir, std::time::Duration::from_secs(6 * 3600));
+        }
         self.update(id, |j| j.output_path = Some(final_path.to_string_lossy().to_string())).await;
 
         let mgr = self.clone();
@@ -335,11 +338,10 @@ impl JobManager {
                 let s2 = s.image.clone();
                 let tmp2 = tmp.clone();
                 progress(15.0);
+                // Image encoding is CPU-bound and can't be interrupted; wait for it, then discard if cancelled.
                 let handle = tokio::task::spawn_blocking(move || image_enc::compress(&tools2, &info2, &s2, &tmp2));
-                tokio::select! {
-                    r = handle => r.map_err(|e| e.to_string()).and_then(|r| r).map(Some),
-                    _ = cancel.notified() => Err("cancelled".into()),
-                }
+                let r = handle.await.map_err(|e| e.to_string()).and_then(|r| r).map(Some);
+                if cancelled.load(Ordering::SeqCst) { Err("cancelled".into()) } else { r }
             }
             MediaKind::Pdf => {
                 let gs = tools.gs()?;
@@ -356,38 +358,12 @@ impl JobManager {
         }
         let dims = run_res.unwrap();
 
-        // Finalize
-        let out_meta = std::fs::metadata(&tmp).map_err(|e| format!("output missing: {e}"))?;
-        let out_size = out_meta.len();
-        if s.output.skip_if_larger && out_size >= info.size && !s.output.overwrite_original {
-            // Keep original bytes: copy the input instead of the (worse) output.
-            let _ = std::fs::remove_file(&tmp);
-            std::fs::copy(&input_path, &final_path).map_err(|e| e.to_string())?;
-        } else if s.output.overwrite_original {
-            let same_ext = input_path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case(ext)).unwrap_or(false);
-            if same_ext {
-                // Atomic replace of the original.
-                std::fs::rename(&tmp, &input_path).map_err(|e| format!("replace failed: {e}"))?;
-                self.update(id, |j| j.output_path = Some(input_path.to_string_lossy().to_string())).await;
-            } else {
-                std::fs::rename(&tmp, &final_path).map_err(|e| format!("move failed: {e}"))?;
-                let _ = trash::delete(&input_path);
-            }
-        } else {
-            std::fs::rename(&tmp, &final_path).map_err(|e| format!("move failed: {e}"))?;
-            if s.output.trash_original {
-                let _ = trash::delete(&input_path);
-            }
+        // Finalize (pure fs logic; unit-tested in output.rs)
+        let (final_real, size) = output::finalize(&input_path, &tmp, &final_path, ext, &s.output, info.size)?;
+        if final_real != final_path {
+            let fr = final_real.to_string_lossy().to_string();
+            self.update(id, |j| j.output_path = Some(fr)).await;
         }
-        let final_real = if s.output.overwrite_original && final_path != input_path && !final_path.exists() { input_path.clone() } else { final_path.clone() };
-        if s.output.keep_dates {
-            if let Ok(meta) = std::fs::metadata(&input_path).or_else(|_| std::fs::metadata(&final_real)) {
-                let mtime = filetime::FileTime::from_last_modification_time(&meta);
-                let atime = filetime::FileTime::from_last_access_time(&meta);
-                let _ = filetime::set_file_times(&final_real, atime, mtime);
-            }
-        }
-        let size = std::fs::metadata(&final_real).map(|m| m.len()).unwrap_or(out_size);
         Ok(DoneInfo { path: final_real, size, dims })
     }
 

@@ -31,6 +31,7 @@ ravif = "0.11"
 rgb = "0.8"
 filetime = "0.2"
 regex = "1"
+tauri-plugin-notification = "2"
 
 [profile.release]
 opt-level = 3

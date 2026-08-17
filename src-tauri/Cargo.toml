@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Feather — offline media compressor"
 authors = ["Firas Latrach"]
 edition = "2021"
+default-run = "feather"
 
 [lib]
 name = "feather_lib"

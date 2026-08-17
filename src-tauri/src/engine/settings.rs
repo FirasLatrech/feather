@@ -114,8 +114,8 @@ impl Default for VideoSettings {
             quality: Quality::Good,
             codec: VideoCodec::Auto,
             format: VideoFormat::Same,
-            // Hardware encoding is 5-10x faster; on by default where available (macOS VideoToolbox).
-            hw_accel: cfg!(target_os = "macos"),
+            // Always on where available; kept for settings-file compatibility only.
+            hw_accel: true,
             resize: Resize::default(),
             fps: None,
             remove_audio: false,
@@ -248,9 +248,9 @@ impl Settings {
     pub fn migrate(mut self) -> Self {
         if self.version < 2 {
             // v2: hardware encoding + Auto codec became the defaults (5-10x faster, smaller HEVC output).
-            self.video.hw_accel = cfg!(target_os = "macos");
             self.video.codec = VideoCodec::Auto;
         }
+        self.video.hw_accel = true;
         self.version = SETTINGS_VERSION;
         self
     }

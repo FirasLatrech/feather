@@ -122,8 +122,9 @@ pub fn build_args(
     let ext = output_ext(info, s);
     let codec = effective_codec(info, ext, s);
     let mut a: Vec<String> = vec!["-hide_banner".into(), "-y".into(), "-nostdin".into()];
-    // Target-size mode needs accurate two-pass rate control → software encoder even if HW is on.
-    let use_hw = s.hw_accel && cfg!(target_os = "macos") && s.target_size_mb.is_none()
+    // Hardware encoding is always used where available (not user-configurable).
+    // Target-size mode needs accurate two-pass rate control → software encoder in that case.
+    let use_hw = cfg!(target_os = "macos") && s.target_size_mb.is_none()
         && matches!(codec, VideoCodec::H264 | VideoCodec::H265);
     if use_hw && ext != "mp3" {
         // Hardware-accelerated *decode* as well (big win for 4K sources).

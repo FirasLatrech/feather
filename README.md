@@ -9,14 +9,17 @@ Drop files in, pick a quality, get smaller files. Nothing is uploaded, ever.
 
 ## Download
 
-**[Latest release →](https://github.com/FirasLatrech/feather/releases/latest)** — macOS (Apple Silicon & Intel).
-Drag Feather to Applications. The app isn't notarized yet, so macOS shows *"Feather is damaged"* on first open —
-it isn't; run this once and open normally:
+**Easiest — one line in Terminal** (downloads the latest release, installs to Applications, and grants it access to open):
 
 ```bash
-xattr -cr /Applications/Feather.app
+curl -fsSL https://raw.githubusercontent.com/FirasLatrech/feather/main/install.sh | sh
 ```
-Needs [FFmpeg](https://ffmpeg.org) (`brew install ffmpeg`) and, for PDFs, Ghostscript (`brew install ghostscript`).
+
+Or grab the `.dmg` from the **[latest release →](https://github.com/FirasLatrech/feather/releases/latest)**.
+Feather isn't notarized yet (it's open source, not signed by a paid Apple developer account), so if you install the
+dmg by hand macOS says *"Feather is damaged"* — it isn't; run `xattr -cr /Applications/Feather.app` once and open it.
+
+FFmpeg is downloaded by Feather itself on first launch if you don't have it. Ghostscript (PDF only) can be installed from Settings.
 
 ## Features
 

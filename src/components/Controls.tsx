@@ -80,3 +80,16 @@ export function NumberInput({ value, onChange, min, max, step, placeholder, suff
     </span>
   );
 }
+
+/** Small disclosure for power-user options; collapsed by default. */
+export function Advanced({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="advanced">
+      <button className="advanced-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <RiArrowDownSLine size={14} className="chev" style={{ transform: open ? "rotate(180deg)" : undefined }} aria-hidden /> Advanced
+      </button>
+      {open && <div className="advanced-body">{children}</div>}
+    </div>
+  );
+}

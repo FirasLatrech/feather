@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { RiFilmLine, RiImageLine, RiFileGifLine, RiFilePdf2Line, RiFolderDownloadLine, RiCloseLine } from "@remixicon/react";
 import type { GifSettings, ImageSettings, MediaKind, OutputSettings, PdfSettings, Settings, VideoSettings } from "../lib/types";
-import { Field, Group, NumberInput, QualityPicker, Segmented, Toggle } from "./Controls";
+import { Advanced, Field, Group, NumberInput, QualityPicker, Segmented, Toggle } from "./Controls";
 import { ResizeControl } from "./ResizeControl";
 import { useStore } from "../store";
 
@@ -27,7 +27,7 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
   const showGif = kinds.includes("gif") || (showVideo && v.format === "gif");
   const showPdf = kinds.includes("pdf");
   const order: [boolean, string][] = [[showVideo, "video"], [showImage, "image"], [showGif, "gif"], [showPdf, "pdf"]];
-  const first = order.find(([v]) => v)?.[1];
+  const first = order.find(([x]) => x)?.[1];
 
   return (
     <aside className="sidebar">
@@ -41,75 +41,82 @@ export function SettingsPanel({ settings, onChange, kinds, title, subtitle, onRe
       </div>
       <div className="sidebar-body">
         {showVideo && (
-          <Group icon={<RiFilmLine size={14} />} title="Video" summary={`${qLabel[v.quality]} · ${v.codec === "auto" ? "Auto" : v.codec.toUpperCase()}`} defaultOpen={first === "video"}>
-            <Field label="Quality" hint={v.target_size_mb ? "Ignored while a target size is set" : undefined}>
+          <Group icon={<RiFilmLine size={14} />} title="Video" summary={`${qLabel[v.quality]}${v.format !== "same" ? " · " + v.format.toUpperCase() : ""}`} defaultOpen={first === "video"}>
+            <Field label="Quality">
               <QualityPicker value={v.quality} onChange={(quality) => setVideo({ quality })} />
             </Field>
-            <Field label="Target size" row hint="Two-pass · overrides quality">
-              <span className="inline">
-                <NumberInput value={v.target_size_mb} onChange={(target_size_mb) => setVideo({ target_size_mb })} min={0.1} step={0.5} placeholder="off" suffix="MB" />
-              </span>
-            </Field>
             <Field label="Format">
-              <Segmented value={v.format} options={[{ value: "same", label: "Same" }, { value: "mp4", label: "MP4" }, { value: "webm", label: "WebM" }, { value: "mov", label: "MOV" }, { value: "mkv", label: "MKV" }, { value: "gif", label: "GIF" }, { value: "mp3", label: "MP3" }]} onChange={(format) => setVideo({ format })} compact />
+              <Segmented value={v.format} options={[{ value: "same", label: "Same" }, { value: "mp4", label: "MP4" }, { value: "mov", label: "MOV" }, { value: "webm", label: "WebM" }, { value: "gif", label: "GIF" }]} onChange={(format) => setVideo({ format })} />
             </Field>
-            {v.format !== "gif" && v.format !== "mp3" && (
+            {v.format !== "gif" && (
               <>
-                <Field label="Codec" hint={v.codec === "auto" ? "Keeps the source codec (HEVC stays HEVC) — best size and speed" : v.format === "webm" ? "WebM uses VP9 or AV1" : "H.265 / AV1: 30–50% smaller than H.264"}>
-                  <Segmented value={v.codec} options={[{ value: "auto", label: "Auto" }, { value: "h264", label: "H.264" }, { value: "h265", label: "H.265" }, { value: "vp9", label: "VP9" }, { value: "av1", label: "AV1" }]} onChange={(codec) => setVideo({ codec })} />
-                </Field>
                 <ResizeControl value={v.resize} onChange={(resize) => setVideo({ resize })} />
-                <Field label="Frame rate" row hint="Lower = smaller">
-                  <NumberInput value={v.fps} onChange={(fps) => setVideo({ fps })} min={1} max={240} placeholder="same" suffix="fps" />
-                </Field>
                 <Field label="Remove audio" row>
-                  <Toggle value={v.remove_audio} onChange={(remove_audio) => setVideo({ remove_audio })} />
+                  <Toggle value={v.remove_audio} onChange={(remove_audio) => setVideo({ remove_audio })} label="Remove audio" />
                 </Field>
+                <Advanced>
+                  <Field label="Target size" row hint="Exact size · slower">
+                    <NumberInput value={v.target_size_mb} onChange={(target_size_mb) => setVideo({ target_size_mb })} min={0.1} step={0.5} placeholder="off" suffix="MB" />
+                  </Field>
+                  <Field label="Codec" hint={v.codec === "auto" ? "Auto keeps the source codec" : undefined}>
+                    <Segmented value={v.codec} options={[{ value: "auto", label: "Auto" }, { value: "h264", label: "H.264" }, { value: "h265", label: "H.265" }, { value: "vp9", label: "VP9" }, { value: "av1", label: "AV1" }]} onChange={(codec) => setVideo({ codec })} compact />
+                  </Field>
+                  <Field label="Frame rate" row>
+                    <NumberInput value={v.fps} onChange={(fps) => setVideo({ fps })} min={1} max={240} placeholder="same" suffix="fps" />
+                  </Field>
+                  <Field label="Trim" hint="Seconds from start → end">
+                    <div className="inline">
+                      <NumberInput value={v.trim_start} onChange={(trim_start) => setVideo({ trim_start })} min={0} step={0.1} placeholder="start" suffix="s" />
+                      <span style={{ color: "var(--fg-3)" }}>→</span>
+                      <NumberInput value={v.trim_end} onChange={(trim_end) => setVideo({ trim_end })} min={0} step={0.1} placeholder="end" suffix="s" />
+                    </div>
+                  </Field>
+                  <Field label="Extract audio only" row hint="Saves an MP3">
+                    <Toggle value={v.format === "mp3"} onChange={(on) => setVideo({ format: on ? "mp3" : "same" })} label="Extract audio only" />
+                  </Field>
+                </Advanced>
               </>
             )}
-            <Field label="Trim" hint="Seconds · leave empty for the full clip">
-              <div className="inline">
-                <NumberInput value={v.trim_start} onChange={(trim_start) => setVideo({ trim_start })} min={0} step={0.1} placeholder="start" suffix="s" />
-                <span style={{ color: "var(--fg-3)" }}>→</span>
-                <NumberInput value={v.trim_end} onChange={(trim_end) => setVideo({ trim_end })} min={0} step={0.1} placeholder="end" suffix="s" />
-              </div>
-            </Field>
           </Group>
         )}
 
         {showImage && (
-          <Group icon={<RiImageLine size={14} />} title="Image" summary={`${qLabel[settings.image.quality]} · ${settings.image.format.toUpperCase()}`} defaultOpen={first === "image"}>
+          <Group icon={<RiImageLine size={14} />} title="Image" summary={`${qLabel[settings.image.quality]}${settings.image.format !== "same" ? " · " + settings.image.format.toUpperCase() : ""}`} defaultOpen={first === "image"}>
             <Field label="Quality">
               <QualityPicker value={settings.image.quality} onChange={(quality) => setImage({ quality })} />
             </Field>
-            <Field label="Format" hint="WebP / AVIF are 30–60% smaller than JPEG · PNG stays lossless">
+            <Field label="Format" hint={settings.image.format === "webp" || settings.image.format === "avif" ? "Much smaller than JPG · supported by all modern apps" : undefined}>
               <Segmented value={settings.image.format} options={[{ value: "same", label: "Same" }, { value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }, { value: "avif", label: "AVIF" }]} onChange={(format) => setImage({ format })} />
             </Field>
-            <ResizeControl value={settings.image.resize} onChange={(resize) => setImage({ resize })} presets={[4096, 2560, 2048, 1920, 1600, 1280, 1024, 800]} />
-            <Field label="Keep metadata" row hint="EXIF & color profile (PNG for now)">
-              <Toggle value={settings.image.keep_metadata} onChange={(keep_metadata) => setImage({ keep_metadata })} />
-            </Field>
+            <ResizeControl value={settings.image.resize} onChange={(resize) => setImage({ resize })} presets={[3840, 2560, 1920, 1280, 854, 640]} />
+            <Advanced>
+              <Field label="Keep metadata" row hint="EXIF, color profile">
+                <Toggle value={settings.image.keep_metadata} onChange={(keep_metadata) => setImage({ keep_metadata })} label="Keep metadata" />
+              </Field>
+            </Advanced>
           </Group>
         )}
 
         {showGif && (
-          <Group icon={<RiFileGifLine size={14} />} title="GIF" summary={`${qLabel[settings.gif.quality]} · ${settings.gif.fps} fps`} defaultOpen={first === "gif" || (showVideo && v.format === "gif")}>
-            <Field label="Quality" hint="Palette size & dithering">
+          <Group icon={<RiFileGifLine size={14} />} title="GIF" summary={qLabel[settings.gif.quality]} defaultOpen={first === "gif" || (showVideo && v.format === "gif")}>
+            <Field label="Quality">
               <QualityPicker value={settings.gif.quality} onChange={(quality) => setGif({ quality })} />
             </Field>
-            <Field label="Frame rate" row>
-              <NumberInput value={settings.gif.fps} onChange={(fps) => setGif({ fps: fps ?? 15 })} min={1} max={60} suffix="fps" />
-            </Field>
-            <ResizeControl value={settings.gif.resize} onChange={(resize) => setGif({ resize })} presets={[1280, 960, 800, 640, 480, 320]} />
-            <Field label="Loop forever" row>
-              <Toggle value={settings.gif.loop_forever} onChange={(loop_forever) => setGif({ loop_forever })} />
-            </Field>
+            <ResizeControl value={settings.gif.resize} onChange={(resize) => setGif({ resize })} presets={[1280, 854, 640]} />
+            <Advanced>
+              <Field label="Frame rate" row>
+                <NumberInput value={settings.gif.fps} onChange={(fps) => setGif({ fps: fps ?? 15 })} min={1} max={60} suffix="fps" />
+              </Field>
+              <Field label="Loop forever" row>
+                <Toggle value={settings.gif.loop_forever} onChange={(loop_forever) => setGif({ loop_forever })} label="Loop forever" />
+              </Field>
+            </Advanced>
           </Group>
         )}
 
         {showPdf && (
           <Group icon={<RiFilePdf2Line size={14} />} title="PDF" summary={qLabel[settings.pdf.quality]} defaultOpen={first === "pdf"}>
-            <Field label="Quality" hint="Highest keeps print quality · Acceptable targets screens (72 dpi)">
+            <Field label="Quality">
               <QualityPicker value={settings.pdf.quality} onChange={(quality) => setPdf({ quality })} />
             </Field>
             <ToolsHint tool="ghostscript" />
@@ -145,7 +152,7 @@ export function OutputSection({ out, setOut }: { out: OutputSettings; setOut: (p
   return (
     <>
       <Field label="Save to">
-        <Segmented value={out.location} options={[{ value: "samefolder", label: "Same folder" }, { value: "subfolder", label: "Subfolder" }, { value: "custom", label: "Custom" }]} onChange={(location) => setOut({ location })} />
+        <Segmented value={out.location} options={[{ value: "samefolder", label: "Same folder" }, { value: "subfolder", label: "Subfolder" }, { value: "custom", label: "Choose…" }]} onChange={(location) => setOut({ location })} />
         {out.location === "subfolder" && (
           <input className="input" value={out.subfolder_name} onChange={(e) => setOut({ subfolder_name: e.target.value })} placeholder="compressed" />
         )}
@@ -156,23 +163,25 @@ export function OutputSection({ out, setOut }: { out: OutputSettings; setOut: (p
           </div>
         )}
       </Field>
-      <Field label="File name" hint="{name} {quality} {resolution} {codec} {date} {time}">
-        <input className="input" value={out.name_template} disabled={out.overwrite_original} onChange={(e) => setOut({ name_template: e.target.value })} />
+      <Field label="Replace original" row hint="Overwrite the source file">
+        <Toggle value={out.overwrite_original} onChange={(overwrite_original) => setOut({ overwrite_original, trash_original: overwrite_original ? false : out.trash_original })} label="Replace original" />
       </Field>
-      <Field label="Replace original" row hint="Overwrites the source · irreversible">
-        <Toggle value={out.overwrite_original} onChange={(overwrite_original) => setOut({ overwrite_original, trash_original: overwrite_original ? false : out.trash_original })} />
-      </Field>
-      {!out.overwrite_original && (
-        <Field label="Move original to Trash" row>
-          <Toggle value={out.trash_original} onChange={(trash_original) => setOut({ trash_original })} />
+      <Advanced>
+        <Field label="File name" hint="{name} {quality} {resolution} {date}">
+          <input className="input" value={out.name_template} disabled={out.overwrite_original} onChange={(e) => setOut({ name_template: e.target.value })} />
         </Field>
-      )}
-      <Field label="Keep original dates" row>
-        <Toggle value={out.keep_dates} onChange={(keep_dates) => setOut({ keep_dates })} />
-      </Field>
-      <Field label="Never make it larger" row hint="Keep original bytes if not smaller">
-        <Toggle value={out.skip_if_larger} onChange={(skip_if_larger) => setOut({ skip_if_larger })} />
-      </Field>
+        {!out.overwrite_original && (
+          <Field label="Move original to Trash" row>
+            <Toggle value={out.trash_original} onChange={(trash_original) => setOut({ trash_original })} label="Move original to Trash" />
+          </Field>
+        )}
+        <Field label="Keep original dates" row>
+          <Toggle value={out.keep_dates} onChange={(keep_dates) => setOut({ keep_dates })} label="Keep original dates" />
+        </Field>
+        <Field label="Never make it larger" row hint="Keep original if not smaller">
+          <Toggle value={out.skip_if_larger} onChange={(skip_if_larger) => setOut({ skip_if_larger })} label="Never make it larger" />
+        </Field>
+      </Advanced>
     </>
   );
 }

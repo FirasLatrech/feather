@@ -296,3 +296,10 @@ dialog.dlg p { color: var(--fg-2); margin-bottom: 16px; }
 dialog.dlg .actions { display: flex; justify-content: flex-end; gap: 8px; }
 .btn.destructive { background: var(--err); border-color: transparent; color: #fff; }
 .btn.destructive:hover:not(:disabled) { background: color-mix(in srgb, var(--err) 90%, black); }
+
+/* Advanced disclosure */
+.advanced { margin-top: 2px; }
+.advanced-toggle { display: inline-flex; align-items: center; gap: 4px; color: var(--fg-3); font-size: 12px; font-weight: 500; padding: 4px 6px 4px 2px; border-radius: 6px; }
+.advanced-toggle:hover { color: var(--fg); background: var(--bg-hover); }
+.advanced-toggle .chev { transition: transform .15s var(--ease); }
+.advanced-body { display: flex; flex-direction: column; gap: 12px; padding: 10px 0 2px; }

@@ -1,42 +1,33 @@
-import type { Resize, ResizeMode } from "../lib/types";
+import type { Resize } from "../lib/types";
 import { Field } from "./Controls";
 
-const MODES: { value: ResizeMode; label: string }[] = [
-  { value: "none", label: "Original" },
-  { value: "width", label: "Max width" },
-  { value: "height", label: "Max height" },
-  { value: "longedge", label: "Long edge" },
-  { value: "shortedge", label: "Short edge" },
-  { value: "percent", label: "Percent" },
+const PRESETS: { label: string; value: number }[] = [
+  { label: "Original size", value: 0 },
+  { label: "4K · 3840 px", value: 3840 },
+  { label: "1440p · 2560 px", value: 2560 },
+  { label: "1080p · 1920 px", value: 1920 },
+  { label: "720p · 1280 px", value: 1280 },
+  { label: "480p · 854 px", value: 854 },
+  { label: "Small · 640 px", value: 640 },
 ];
 
-export function ResizeControl({ value, onChange, presets }: { value: Resize; onChange: (r: Resize) => void; presets?: number[] }) {
-  const p = presets ?? [3840, 2560, 1920, 1280, 1080, 720, 480];
+/** Simple resize: one dropdown of long-edge presets. Never upscales, keeps aspect ratio. */
+export function ResizeControl({ value, onChange, presets, label = "Resize" }: { value: Resize; onChange: (r: Resize) => void; presets?: number[]; label?: string }) {
+  const list = presets ? [PRESETS[0], ...PRESETS.filter((p) => presets.includes(p.value))] : PRESETS;
+  const isPreset = value.mode === "none" || (value.mode === "longedge" && list.some((p) => p.value === value.value));
   return (
-    <Field label="Resize" hint="Never upscales · aspect ratio kept">
-      <div className="inline" style={{ gap: 8 }}>
-        <select className="select" value={value.mode} onChange={(e) => onChange({ mode: e.target.value as ResizeMode, value: value.value || (e.target.value === "percent" ? 50 : 1920) })}>
-          {MODES.map((m) => (
-            <option key={m.value} value={m.value}>{m.label}</option>
-          ))}
-        </select>
-        {value.mode !== "none" && (
-          <>
-            <input
-              className="input sm"
-              type="number"
-              min={1}
-              value={value.value || ""}
-              onChange={(e) => onChange({ ...value, value: Number(e.target.value) || 0 })}
-              list={value.mode === "percent" ? undefined : "resize-presets"}
-            />
-            <small style={{ color: "var(--fg-3)" }}>{value.mode === "percent" ? "%" : "px"}</small>
-            <datalist id="resize-presets">
-              {p.map((v) => <option key={v} value={v} />)}
-            </datalist>
-          </>
-        )}
-      </div>
+    <Field label={label} hint="Longest side · never upscales">
+      <select
+        className="select"
+        value={isPreset ? (value.mode === "none" ? 0 : value.value) : "custom"}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          onChange(v === 0 ? { mode: "none", value: 0 } : { mode: "longedge", value: v });
+        }}
+      >
+        {list.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+        {!isPreset && <option value="custom">Custom · {value.value}{value.mode === "percent" ? "%" : " px"} ({value.mode})</option>}
+      </select>
     </Field>
   );
 }

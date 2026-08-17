@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && rm -f dist/feather-trailer.mp4",
     "preview": "vite preview",
     "tauri": "tauri"
   },

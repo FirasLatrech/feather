@@ -13,8 +13,6 @@ dist-ssr
 *.local
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
 .idea
 .DS_Store
 *.suo
@@ -27,8 +25,7 @@ dist-ssr
 src-tauri/target
 src-tauri/gen/schemas
 src-tauri/binaries
-trailer/out
-trailer/node_modules
-showcase/out
-showcase/rec
-showcase/node_modules
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
